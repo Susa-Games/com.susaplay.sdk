@@ -94,7 +94,7 @@ Use Unity Package Manager with a Git URL pinned to a tag:
 ```json
 {
   "dependencies": {
-    "com.susaplay.sdk": "https://github.com/YOUR_ORG/com.susaplay.sdk.git#v1.0.0"
+    "com.susaplay.sdk": "https://github.com/mehrdadmoradabadi/com.susaplay.sdk.git#v1.0.0"
   }
 }
 ```
