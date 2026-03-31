@@ -1,0 +1,5 @@
+{
+  "name": "susaplay.SDK.Runtime",
+  "rootNamespace": "susaplay.SDK",
+  "autoReferenced": true
+}

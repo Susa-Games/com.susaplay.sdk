@@ -1,0 +1,8 @@
+{
+  "name": "susaplay.SDK.Editor",
+  "rootNamespace": "susaplay.SDK.Editor",
+  "includePlatforms": ["Editor"],
+  "autoReferenced": false,
+  "optionalUnityReferences": [],
+  "references": ["susaplay.SDK.Runtime"]
+}

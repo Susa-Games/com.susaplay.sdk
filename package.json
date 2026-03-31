@@ -1,0 +1,18 @@
+{
+  "name": "com.susaplay.sdk",
+  "version": "1.0.0",
+  "displayName": "SusaPlay SDK",
+  "description": "SusaPlay SDK for Unity",
+  "unity": "2021.3",
+  "author": {
+    "name": "Mehrdad"
+  },
+  "samples": [
+    {
+      "displayName": "SDK Smoke Test",
+      "description": "Runtime + Editor tools for end-to-end and negative-case SDK testing.",
+      "path": "Samples~/SDKSmokeTest"
+    }
+  ],
+  "hideInEditor": false
+}
