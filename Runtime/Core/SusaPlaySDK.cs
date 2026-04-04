@@ -17,6 +17,8 @@ namespace susaplay.SDK
         private static AnalyticsModule _analytics;
         private static AnalyticsFlusher _flusher;
         public static AnalyticsModule Analytics => _analytics;
+        private static PurchasesModule _purchases;
+        public static PurchasesModule Purchases => _purchases;
         private const string SdkVersion = "1.0.0";
         private const int InitTimeoutMs = 15000;
 
@@ -102,6 +104,8 @@ namespace susaplay.SDK
             _auth.Initialize(playerData);
             _cloudSave = new CloudSaveModule(_httpClient, playerData.gameId);
             _analytics = new AnalyticsModule(_httpClient);
+            _purchases = new PurchasesModule(playerData.gameId);
+            _purchases.Initialize();
             var flusherGO = new GameObject("SusaPlayAnalyticsFlusher");
             GameObject.DontDestroyOnLoad(flusherGO);
             _flusher = flusherGO.AddComponent<AnalyticsFlusher>();

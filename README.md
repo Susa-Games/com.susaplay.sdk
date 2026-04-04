@@ -22,6 +22,7 @@ If you use a method that exists in the package, you may use it. If a feature is 
 - `SusaPlaySDK.Auth`
 - `SusaPlaySDK.CloudSave`
 - `SusaPlaySDK.Analytics`
+- `SusaPlaySDK.Purchases`
 
 ### AuthModule
 
@@ -64,6 +65,47 @@ Notes:
 - Events are queued locally and flushed through the platform shell
 - Automatic event schema validation is still minimal in this version
 
+### PurchasesModule
+
+Available methods:
+
+- `Task<XsollaPurchaseResult> StartXsollaPurchase(bool sandbox = false)`
+
+Notes:
+
+- WebGL purchase flow currently targets Xsolla Pay Station
+- The shell opens Pay Station and returns a structured `SDK_XSOLLA_PURCHASE_RESPONSE`
+- Successful results include the refreshed wallet snapshot when the shell can fetch it
+- The current platform implementation behaves as a wallet top-up flow, not yet a
+  final catalog-driven coin-pack store
+
+Example:
+
+```csharp
+var result = await SusaPlaySDK.Purchases.StartXsollaPurchase(true);
+
+if (result.Success)
+{
+    Debug.Log("Purchase status: " + result.Status);
+    Debug.Log("Wallet coins: " + result.Wallet.coins);
+}
+else
+{
+    Debug.LogError($"Purchase failed: {result.ErrorCode} - {result.ErrorMessage}");
+}
+```
+
+Current behavior notes:
+
+- `sandbox = true` should be used during integration testing
+- the shell may receive a Pay Station `return` / `close` message before the final
+  webhook is fully reflected in UI state, so the shell now checks backend purchase
+  status before responding to the SDK
+- the current backend credits wallet balance from the observed Xsolla payment
+  amount model
+- wallet balances may currently be fractional during this phase
+- later product work may replace this with catalog-based coin packs or items
+
 ### Editor Tooling
 
 Available menu:
@@ -82,7 +124,7 @@ These features are planned, partially stubbed in the wider platform, or expected
 - richer auth flows and auth callbacks
 - custom event helpers beyond raw analytics
 - mobile runtime path
-- purchase / economy modules
+- broader purchase / economy modules beyond Xsolla Pay Station
 - stronger save conflict resolution and merge helpers
 - better initialization result objects and diagnostics
 - stronger validation in editor setup flow
