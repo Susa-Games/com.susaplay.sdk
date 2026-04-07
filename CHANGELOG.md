@@ -2,6 +2,31 @@
 
 All notable changes to `com.susaplay.sdk` should be documented in this file.
 
+## [1.1.1] - 2026-04-07
+
+Fixed today:
+
+- added missing Unity `.meta` files for package root docs and newly added SDK assets
+- aligned package version metadata with the published Git tag
+- updated README install examples to point to the latest stable tag
+
+Notes:
+
+- this is a packaging and release-hygiene patch with no intended runtime API changes
+
+## [1.1.0] - 2026-04-04
+
+Added today:
+
+- `SusaPlaySDK.Purchases`
+- `PurchasesModule.StartXsollaPurchase(bool sandbox = false)`
+- purchase flow README guidance for Xsolla integration
+
+Notes:
+
+- Git install instructions now point to the `v1.1.0` release tag
+- Package metadata is aligned with the current release version
+
 ## [1.0.0] - 2026-03-31
 
 Initial Git-package release baseline from the platform monorepo.

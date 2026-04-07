@@ -2,6 +2,8 @@
 
 Unity SDK package for integrating games with the SusaPlay platform.
 
+Latest stable release tag: `v1.1.1`
+
 This package is intended for games that run inside the SusaPlay shell on WebGL today. The current implementation is real and usable, but still evolving. We are intentionally exposing all implemented methods so game teams can integrate early and help us tune the SDK against real game behavior.
 
 ## Current Status
@@ -131,12 +133,12 @@ These features are planned, partially stubbed in the wider platform, or expected
 
 ## Installation
 
-Use Unity Package Manager with a Git URL pinned to a tag:
+Use Unity Package Manager with a Git URL pinned to a release tag:
 
 ```json
 {
   "dependencies": {
-    "com.susaplay.sdk": "https://github.com/Susa-Games/com.susaplay.sdk.git#v1.0.0"
+    "com.susaplay.sdk": "https://github.com/Susa-Games/com.susaplay.sdk.git#v1.1.1"
   }
 }
 ```
@@ -144,6 +146,14 @@ Use Unity Package Manager with a Git URL pinned to a tag:
 You can also use:
 
 - Unity -> Window -> Package Manager -> Add package from git URL
+- `https://github.com/Susa-Games/com.susaplay.sdk.git#v1.1.1`
+
+Versioning notes:
+
+- Use `#v1.1.1` or another tag when you want a reproducible release install
+- Use `#main` only if you intentionally want the moving head of development
+- Unity Package Manager does not support a special `#latest` keyword for Git dependencies
+- If you want a moving stable channel, create and maintain a branch such as `#release`
 
 ## Unity Version
 
