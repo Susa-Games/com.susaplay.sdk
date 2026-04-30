@@ -2,7 +2,7 @@
 
 Unity SDK package for integrating games with the SusaPlay platform.
 
-Latest stable release tag: `v1.1.1`
+Latest stable release tag: `v1.2.0`
 
 This package is intended for games that run inside the SusaPlay shell on WebGL today. The current implementation is real and usable, but still evolving. We are intentionally exposing all implemented methods so game teams can integrate early and help us tune the SDK against real game behavior.
 
@@ -60,11 +60,14 @@ Notes:
 Available methods:
 
 - `void LogEvent(string name, string parameters = "{}")`
+- `void LogB2BEvent(string payloadJson)`
+- `void LogB2BEvent(object payload)`
 - `Task Flush()`
 
 Notes:
 
 - Events are queued locally and flushed through the platform shell
+- B2B events accept a JSON object payload that is sent as raw event parameters for platform webhook calls
 - Automatic event schema validation is still minimal in this version
 
 ### PurchasesModule
@@ -138,7 +141,7 @@ Use Unity Package Manager with a Git URL pinned to a release tag:
 ```json
 {
   "dependencies": {
-    "com.susaplay.sdk": "https://github.com/Susa-Games/com.susaplay.sdk.git#v1.1.1"
+    "com.susaplay.sdk": "https://github.com/Susa-Games/com.susaplay.sdk.git#v1.2.0"
   }
 }
 ```
@@ -146,14 +149,14 @@ Use Unity Package Manager with a Git URL pinned to a release tag:
 You can also use:
 
 - Unity -> Window -> Package Manager -> Add package from git URL
-- `https://github.com/Susa-Games/com.susaplay.sdk.git#v1.1.1`
+- `https://github.com/Susa-Games/com.susaplay.sdk.git#v1.2.0`
 
 Versioning notes:
 
-- Use `#v1.1.1` or another tag when you want a reproducible release install
+- Use `#v1.2.0` or another tag when you want a reproducible release install
 - Use `#main` only if you intentionally want the moving head of development
-- Unity Package Manager does not support a special `#latest` keyword for Git dependencies
-- If you want a moving stable channel, create and maintain a branch such as `#release`
+- Use `#latest` for the newest published SDK branch maintained by SusaPlay
+- Use `#release` for the current stable SDK branch maintained by SusaPlay
 
 ## Unity Version
 
@@ -229,6 +232,13 @@ SusaPlaySDK.Analytics.LogEvent("level_started", "{\"level\":3}");
 await SusaPlaySDK.Analytics.Flush();
 ```
 
+### Log B2B webhook data
+
+```csharp
+SusaPlaySDK.Analytics.LogB2BEvent("{\"matchId\":\"abc123\",\"score\":4200}");
+await SusaPlaySDK.Analytics.Flush();
+```
+
 ## WebGL Runtime Expectations
 
 This package currently depends on the SusaPlay WebGL shell contract:
@@ -254,8 +264,9 @@ Import it from Unity Package Manager samples to validate the integration inside 
 We recommend pinned Git tags:
 
 - `v1.0.0`
-- `v1.0.1`
 - `v1.1.0`
+- `v1.1.1`
+- `v1.2.0`
 
 Guidelines:
 

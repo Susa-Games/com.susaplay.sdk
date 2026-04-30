@@ -8,6 +8,7 @@ namespace susaplay.SDK
         public string name;
         public string parameters;
         public string clientTimestamp;
+        [NonSerialized] public bool parametersAsJsonObject;
 
     }
 }

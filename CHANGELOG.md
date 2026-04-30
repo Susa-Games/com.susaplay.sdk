@@ -2,6 +2,13 @@
 
 All notable changes to `com.susaplay.sdk` should be documented in this file.
 
+## [1.2.0] - 2026-04-30
+
+Added today:
+
+- `AnalyticsModule.LogB2BEvent(...)` for webhook-bound B2B JSON payloads
+- updated package metadata and README examples for `v1.2.0`
+
 ## [1.1.1] - 2026-04-07
 
 Fixed today:

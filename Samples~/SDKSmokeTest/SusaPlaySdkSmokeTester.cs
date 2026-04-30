@@ -280,6 +280,25 @@ namespace susaplay.SDK.Samples
                     return true;
                 }
             );
+
+            await ExecuteCase(
+                "B2B analytics payload",
+                ExpectedOutcome.Success,
+                async () =>
+                {
+                    var payload = new B2BAnalyticsPayload
+                    {
+                        runId = runId,
+                        webhookType = "smoke_test",
+                        score = UnityEngine.Random.Range(1000, 9999),
+                        timestampUtc = DateTime.UtcNow.ToString("o")
+                    };
+
+                    SusaPlaySDK.Analytics.LogB2BEvent(payload);
+                    await WithTimeout(SusaPlaySDK.Analytics.Flush(), defaultTimeoutMs);
+                    return true;
+                }
+            );
         }
 
         private async Task RunStressCasesAsync(string runId)
@@ -575,6 +594,15 @@ namespace susaplay.SDK.Samples
             public string runId;
             public int sequence;
             public int randomValue;
+            public string timestampUtc;
+        }
+
+        [Serializable]
+        private class B2BAnalyticsPayload
+        {
+            public string runId;
+            public string webhookType;
+            public int score;
             public string timestampUtc;
         }
 
