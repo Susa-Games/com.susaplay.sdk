@@ -2,6 +2,12 @@
 
 All notable changes to `com.susaplay.sdk` should be documented in this file.
 
+## [1.2.1] - 2026-05-01
+
+Fixed today:
+
+- updated the WebGL bridge callback invocation for Unity 6 / newer Emscripten builds where global `dynCall_vi` is no longer available
+
 ## [1.2.0] - 2026-04-30
 
 Added today:
