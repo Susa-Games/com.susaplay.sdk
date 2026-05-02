@@ -1,6 +1,6 @@
 {
   "name": "com.susaplay.sdk",
-  "version": "1.2.1",
+  "version": "1.2.0",
   "displayName": "SusaPlay SDK",
   "description": "SusaPlay SDK for Unity",
   "unity": "2021.3",

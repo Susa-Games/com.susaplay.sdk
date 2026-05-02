@@ -2,7 +2,7 @@
 
 Unity SDK package for integrating games with the SusaPlay platform.
 
-Latest stable release tag: `v1.2.0`
+Latest stable release tag: `v1.2.2`
 
 This package is intended for games that run inside the SusaPlay shell on WebGL today. The current implementation is real and usable, but still evolving. We are intentionally exposing all implemented methods so game teams can integrate early and help us tune the SDK against real game behavior.
 
@@ -75,24 +75,39 @@ Notes:
 Available methods:
 
 - `Task<XsollaPurchaseResult> StartXsollaPurchase(bool sandbox = false)`
+- `Task<XsollaPurchaseResult> StartDirectItemPurchase(string itemId, bool sandbox = false)`
+- `Task<XsollaPurchaseResult> StartWalletTopupPurchase(string topupPackId, bool sandbox = false)`
+- `Task<StoreCatalogResult> GetStoreItems()`
+- `Task<PlatformWalletResult> GetPlatformWallet()`
+- `Task<TopupPacksResult> GetTopupPacks()`
+- `Task<PlatformWalletSpendResult> SpendPlatformWallet(string itemId)`
 
 Notes:
 
 - WebGL purchase flow currently targets Xsolla Pay Station
 - The shell opens Pay Station and returns a structured `SDK_XSOLLA_PURCHASE_RESPONSE`
-- Successful results include the refreshed wallet snapshot when the shell can fetch it
-- The current platform implementation behaves as a wallet top-up flow, not yet a
-  final catalog-driven coin-pack store
+- Successful results may include a refreshed game wallet or platform wallet snapshot
+- Direct item purchases grant inventory after webhook confirmation
+- Wallet top-ups credit the platform wallet after webhook confirmation
 
 Example:
 
 ```csharp
-var result = await SusaPlaySDK.Purchases.StartXsollaPurchase(true);
+var catalog = await SusaPlaySDK.Purchases.GetStoreItems();
+if (!catalog.Success || catalog.Items.Length == 0)
+{
+    Debug.LogError("No store items found.");
+    return;
+}
+
+var result = await SusaPlaySDK.Purchases.StartDirectItemPurchase(
+    catalog.Items[0].itemId,
+    true
+);
 
 if (result.Success)
 {
     Debug.Log("Purchase status: " + result.Status);
-    Debug.Log("Wallet coins: " + result.Wallet.coins);
 }
 else
 {
@@ -106,10 +121,9 @@ Current behavior notes:
 - the shell may receive a Pay Station `return` / `close` message before the final
   webhook is fully reflected in UI state, so the shell now checks backend purchase
   status before responding to the SDK
-- the current backend credits wallet balance from the observed Xsolla payment
-  amount model
-- wallet balances may currently be fractional during this phase
-- later product work may replace this with catalog-based coin packs or items
+- use `GetStoreItems()` to build your in-game shop UI from platform data
+- use `GetTopupPacks()` to build SusaPlay wallet top-up UI
+- use `SpendPlatformWallet(itemId)` only for items that are wallet-eligible
 
 ### Editor Tooling
 
@@ -141,7 +155,7 @@ Use Unity Package Manager with a Git URL pinned to a release tag:
 ```json
 {
   "dependencies": {
-    "com.susaplay.sdk": "https://github.com/Susa-Games/com.susaplay.sdk.git#v1.2.0"
+    "com.susaplay.sdk": "https://github.com/Susa-Games/com.susaplay.sdk.git#v1.2.2"
   }
 }
 ```
@@ -149,11 +163,11 @@ Use Unity Package Manager with a Git URL pinned to a release tag:
 You can also use:
 
 - Unity -> Window -> Package Manager -> Add package from git URL
-- `https://github.com/Susa-Games/com.susaplay.sdk.git#v1.2.0`
+- `https://github.com/Susa-Games/com.susaplay.sdk.git#v1.2.2`
 
 Versioning notes:
 
-- Use `#v1.2.0` or another tag when you want a reproducible release install
+- Use `#v1.2.2` or another tag when you want a reproducible release install
 - Use `#main` only if you intentionally want the moving head of development
 - Use `#latest` for the newest published SDK branch maintained by SusaPlay
 - Use `#release` for the current stable SDK branch maintained by SusaPlay
@@ -239,6 +253,41 @@ SusaPlaySDK.Analytics.LogB2BEvent("{\"matchId\":\"abc123\",\"score\":4200}");
 await SusaPlaySDK.Analytics.Flush();
 ```
 
+## Commerce Quick Start
+
+### Fetch game store items
+
+```csharp
+var catalog = await SusaPlaySDK.Purchases.GetStoreItems();
+if (catalog.Success)
+{
+    foreach (var item in catalog.Items)
+    {
+        Debug.Log($"{item.name}: {item.price.amount} {item.price.currency}");
+    }
+}
+```
+
+### Top up the SusaPlay wallet
+
+```csharp
+var packs = await SusaPlaySDK.Purchases.GetTopupPacks();
+if (packs.Success && packs.Packs.Length > 0)
+{
+    await SusaPlaySDK.Purchases.StartWalletTopupPurchase(packs.Packs[0].topupPackId, true);
+}
+```
+
+### Spend platform wallet on a supported item
+
+```csharp
+var spend = await SusaPlaySDK.Purchases.SpendPlatformWallet("starter_pack");
+if (spend.Success && spend.Wallet != null)
+{
+    Debug.Log("Platform coins after spend: " + spend.Wallet.coins);
+}
+```
+
 ## WebGL Runtime Expectations
 
 This package currently depends on the SusaPlay WebGL shell contract:
@@ -266,7 +315,7 @@ We recommend pinned Git tags:
 - `v1.0.0`
 - `v1.1.0`
 - `v1.1.1`
-- `v1.2.0`
+- `v1.2.2`
 
 Guidelines:
 

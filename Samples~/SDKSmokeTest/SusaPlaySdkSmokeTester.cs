@@ -164,6 +164,7 @@ namespace susaplay.SDK.Samples
             Log("Running positive cases...");
             await RunAnalyticsHappyPathAsync(runId);
             await RunCloudSaveHappyPathAsync(runId, slot);
+            await RunStoreCatalogHappyPathAsync();
         }
 
         private async Task RunNegativeCasesAsync(string runId)
@@ -424,6 +425,26 @@ namespace susaplay.SDK.Samples
                     Log("Load(after save) data=" + Safe(loadResult.Data));
 
                     return loadResult.Success && !string.IsNullOrEmpty(loadResult.Data) && loadResult.Data.Contains(runId);
+                }
+            );
+        }
+
+        private async Task RunStoreCatalogHappyPathAsync()
+        {
+            await ExecuteCase(
+                "Purchases.GetStoreItems",
+                ExpectedOutcome.Success,
+                async () =>
+                {
+                    var result = await WithTimeout(
+                        SusaPlaySDK.Purchases.GetStoreItems(),
+                        defaultTimeoutMs
+                    );
+                    if (result.Success)
+                    {
+                        Log("Store items fetched=" + result.Items.Length);
+                    }
+                    return result.Success;
                 }
             );
         }

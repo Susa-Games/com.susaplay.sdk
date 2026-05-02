@@ -2,18 +2,34 @@
 
 All notable changes to `com.susaplay.sdk` should be documented in this file.
 
-## [1.2.1] - 2026-05-01
+## [Unreleased]
 
-Fixed today:
+Added:
 
-- updated the WebGL bridge callback invocation for Unity 6 / newer Emscripten builds where global `dynCall_vi` is no longer available
+- `PurchasesModule.GetStoreItems()`
+- `PurchasesModule.GetTopupPacks()`
+- `PurchasesModule.GetPlatformWallet()`
+- `PurchasesModule.SpendPlatformWallet(string itemId)`
+- `PurchasesModule.StartDirectItemPurchase(string itemId, bool sandbox = false)`
+- `PurchasesModule.StartWalletTopupPurchase(string topupPackId, bool sandbox = false)`
+
+Changed:
+
+- Xsolla purchase messaging now supports explicit purchase intents
+- README examples now describe direct-item purchases and wallet top-ups
+- platform commerce contract now includes store catalog fetch for games
+
+Notes:
+
+- `StartXsollaPurchase(bool sandbox = false)` remains for backward compatibility
+- explicit direct-item and wallet-topup methods are now the recommended path
 
 ## [1.2.0] - 2026-04-30
 
 Added today:
 
 - `AnalyticsModule.LogB2BEvent(...)` for webhook-bound B2B JSON payloads
-- updated package metadata and README examples for `v1.2.0`
+- updated package metadata and README examples for `v1.2.2`
 
 ## [1.1.1] - 2026-04-07
 

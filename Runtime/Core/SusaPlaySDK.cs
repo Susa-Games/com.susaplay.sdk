@@ -104,7 +104,7 @@ namespace susaplay.SDK
             _auth.Initialize(playerData);
             _cloudSave = new CloudSaveModule(_httpClient, playerData.gameId);
             _analytics = new AnalyticsModule(_httpClient);
-            _purchases = new PurchasesModule(playerData.gameId);
+            _purchases = new PurchasesModule(_httpClient, playerData.gameId);
             _purchases.Initialize();
             var flusherGO = new GameObject("SusaPlayAnalyticsFlusher");
             GameObject.DontDestroyOnLoad(flusherGO);
