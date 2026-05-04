@@ -21,9 +21,16 @@ namespace susaplay.SDK
         public static PurchasesModule Purchases => _purchases;
         private const string SdkVersion = "1.0.0";
         private const int InitTimeoutMs = 15000;
+        private static bool _isInitialized;
+        private static bool _didSendGameLoaded;
 
         public static async Task Initialize()
         {
+            if (_isInitialized)
+            {
+                return;
+            }
+
             _config = SDKConfig.Load();
             if (_config == null)
             {
@@ -50,6 +57,27 @@ namespace susaplay.SDK
                 return;
             }
             await _initTcs.Task;
+        }
+
+        public static void MarkGameLoaded()
+        {
+            if (!_isInitialized)
+            {
+                Logger.Error("SusaPlay SDK must be initialized before MarkGameLoaded.");
+                return;
+            }
+
+            if (_didSendGameLoaded)
+            {
+                return;
+            }
+
+            WebGLBridge.SendMessage(new BridgeMessage
+            {
+                type = "SDK_GAME_LOADED",
+                payload = "{}"
+            });
+            _didSendGameLoaded = true;
         }
 
         private static void HandleInitMessage(string json)
@@ -112,12 +140,7 @@ namespace susaplay.SDK
             _flusher.Initialize(_analytics);
             WebGLBridge.OnMessageReceived -= HandleInitMessage;
             Logger.Log("SusaPlay SDK Ready.");
-            WebGLBridge.SendMessage(new BridgeMessage
-            {
-                type = "SDK_GAME_LOADED",
-                payload = "{}"
-            });
-            Logger.Log("SusaPlay SDK Ready.");
+            _isInitialized = true;
             _initTcs.SetResult(message.payload);
         }
     }
