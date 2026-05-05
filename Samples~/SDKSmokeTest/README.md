@@ -8,7 +8,7 @@ This sample creates a minimal Unity project flow to validate SusaPlay SDK end-to
 - Logs auth state (`IsGuest`, `IsAuthenticated`, `Uid`, `DisplayName`)
 - Runs positive scenarios:
   - Sends multiple analytics events with random payload
-  - Sends a B2B analytics payload for webhook-bound data
+  - Sends a B2B webhook payload for partner-bound data
   - Calls `Analytics.Flush()`
   - `Load(slot)` before save
   - `Save(slot, randomData)`

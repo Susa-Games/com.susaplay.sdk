@@ -24,6 +24,7 @@ If you use a method that exists in the package, you may use it. If a feature is 
 - `SusaPlaySDK.Auth`
 - `SusaPlaySDK.CloudSave`
 - `SusaPlaySDK.Analytics`
+- `SusaPlaySDK.Webhooks`
 - `SusaPlaySDK.Purchases`
 
 ### AuthModule
@@ -60,15 +61,24 @@ Notes:
 Available methods:
 
 - `void LogEvent(string name, string parameters = "{}")`
-- `void LogB2BEvent(string payloadJson)`
-- `void LogB2BEvent(object payload)`
 - `Task Flush()`
 
 Notes:
 
 - Events are queued locally and flushed through the platform shell
-- B2B events accept a JSON object payload that is sent as raw event parameters for platform webhook calls
 - Automatic event schema validation is still minimal in this version
+
+### WebhooksModule
+
+Available methods:
+
+- `void SendEvent(string eventName, string payloadJson = "{}")`
+- `void SendEvent(string eventName, object payload)`
+
+Use this for partner-facing B2B events that should be delivered through configured
+developer webhooks. Do not send these through analytics unless you also want aggregate
+analytics reporting.
+On WebGL, webhook events are sent through the shell bridge as `SDK_B2B_EVENT`.
 
 ### PurchasesModule
 
@@ -249,8 +259,10 @@ await SusaPlaySDK.Analytics.Flush();
 ### Log B2B webhook data
 
 ```csharp
-SusaPlaySDK.Analytics.LogB2BEvent("{\"matchId\":\"abc123\",\"score\":4200}");
-await SusaPlaySDK.Analytics.Flush();
+SusaPlaySDK.Webhooks.SendEvent(
+    "score_threshold",
+    "{\"matchId\":\"abc123\",\"score\":4200,\"threshold\":1000}"
+);
 ```
 
 ## Commerce Quick Start

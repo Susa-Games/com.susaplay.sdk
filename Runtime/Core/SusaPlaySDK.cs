@@ -17,6 +17,8 @@ namespace susaplay.SDK
         private static AnalyticsModule _analytics;
         private static AnalyticsFlusher _flusher;
         public static AnalyticsModule Analytics => _analytics;
+        private static WebhooksModule _webhooks;
+        public static WebhooksModule Webhooks => _webhooks;
         private static PurchasesModule _purchases;
         public static PurchasesModule Purchases => _purchases;
         private const string SdkVersion = "1.0.0";
@@ -131,7 +133,8 @@ namespace susaplay.SDK
             _auth = new AuthModule();
             _auth.Initialize(playerData);
             _cloudSave = new CloudSaveModule(_httpClient, playerData.gameId);
-            _analytics = new AnalyticsModule(_httpClient);
+            _analytics = new AnalyticsModule(_httpClient, playerData.gameId, playerData.sessionId);
+            _webhooks = new WebhooksModule(_httpClient, playerData.gameId, playerData.sessionId);
             _purchases = new PurchasesModule(_httpClient, playerData.gameId);
             _purchases.Initialize();
             var flusherGO = new GameObject("SusaPlayAnalyticsFlusher");

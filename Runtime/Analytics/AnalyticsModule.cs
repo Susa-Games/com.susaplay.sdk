@@ -6,12 +6,15 @@ namespace susaplay.SDK
 {
     public class AnalyticsModule
     {
-        private const string B2BEventName = "b2b_webhook";
         private HttpClient _httpClient;
+        private string _gameId;
+        private string _sessionId;
         private List<AnalyticsEvent> _eventQueue;
-        public AnalyticsModule(HttpClient httpClient)
+        public AnalyticsModule(HttpClient httpClient, string gameId = null, string sessionId = null)
         {
             _httpClient = httpClient;
+            _gameId = gameId;
+            _sessionId = sessionId;
             _eventQueue = new List<AnalyticsEvent>();
         }
 
@@ -27,33 +30,29 @@ namespace susaplay.SDK
 
         }
 
+        [Obsolete("Use SusaPlaySDK.Webhooks.SendEvent instead.")]
         public void LogB2BEvent(string payloadJson)
         {
-            if (string.IsNullOrWhiteSpace(payloadJson))
+            Logger.Warn("Analytics.LogB2BEvent is deprecated. Use SusaPlaySDK.Webhooks.SendEvent instead.");
+            if (SusaPlaySDK.Webhooks == null)
             {
-                Logger.Warn("B2B analytics payload is empty. Queuing an empty JSON object.");
-                payloadJson = "{}";
+                Logger.Warn("Webhook module is not initialized. B2B event was not sent.");
+                return;
             }
-
-            _eventQueue.Add(new AnalyticsEvent
-            {
-                name = B2BEventName,
-                parameters = payloadJson,
-                clientTimestamp = DateTime.UtcNow.ToString("o"),
-                parametersAsJsonObject = true
-            });
-            Logger.Log("Queued B2B analytics event.");
+            SusaPlaySDK.Webhooks.SendEvent("b2b_event", payloadJson);
         }
 
+        [Obsolete("Use SusaPlaySDK.Webhooks.SendEvent instead.")]
         public void LogB2BEvent(object payload)
         {
-            if (payload == null)
+            Logger.Warn("Analytics.LogB2BEvent is deprecated. Use SusaPlaySDK.Webhooks.SendEvent instead.");
+            if (SusaPlaySDK.Webhooks == null)
             {
-                LogB2BEvent("{}");
+                Logger.Warn("Webhook module is not initialized. B2B event was not sent.");
                 return;
             }
 
-            LogB2BEvent(JsonUtility.ToJson(payload));
+            SusaPlaySDK.Webhooks.SendEvent("b2b_event", payload == null ? "{}" : JsonUtility.ToJson(payload));
         }
 
         public async Task Flush()
@@ -65,18 +64,45 @@ namespace susaplay.SDK
             var eventsToSend = new List<AnalyticsEvent>(_eventQueue);
             _eventQueue.Clear();
             var sb = new System.Text.StringBuilder();
-            sb.Append("{\"events\":[");
+            AppendAnalyticsBatchJson(sb, eventsToSend, _gameId, _sessionId);
+#if UNITY_WEBGL && !UNITY_EDITOR
+            WebGLBridge.SendMessage(new BridgeMessage
+            {
+                type = "SDK_LOG_EVENT",
+                payload = sb.ToString()
+            });
+            await Task.CompletedTask;
+#else
+            var response = await _httpClient.Post("/analytics/event", sb.ToString());
+            if (!response.Success)
+            {
+                Logger.Warn("Failed to send analytics event: " + response.Error);
+            }
+#endif
+        }
+
+        private static void AppendAnalyticsBatchJson(System.Text.StringBuilder sb, List<AnalyticsEvent> eventsToSend, string gameId, string sessionId)
+        {
+            sb.Append("{");
+            if (!string.IsNullOrEmpty(gameId))
+            {
+                sb.Append("\"gameId\":");
+                AppendJsonString(sb, gameId);
+                sb.Append(",");
+            }
+            if (!string.IsNullOrEmpty(sessionId))
+            {
+                sb.Append("\"sessionId\":");
+                AppendJsonString(sb, sessionId);
+                sb.Append(",");
+            }
+            sb.Append("\"events\":[");
             for (int i = 0; i < eventsToSend.Count; i++)
             {
                 AppendEventJson(sb, eventsToSend[i]);
                 if (i < eventsToSend.Count - 1) sb.Append(",");
             }
             sb.Append("]}");
-            var response = await _httpClient.Post("/analytics/event", sb.ToString());
-            if (!response.Success)
-            {
-                Logger.Warn("Failed to send analytics event: " + response.Error);
-            }
         }
 
         private static void AppendEventJson(System.Text.StringBuilder sb, AnalyticsEvent analyticsEvent)

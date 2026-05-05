@@ -283,11 +283,11 @@ namespace susaplay.SDK.Samples
             );
 
             await ExecuteCase(
-                "B2B analytics payload",
+                "B2B webhook payload",
                 ExpectedOutcome.Success,
                 async () =>
                 {
-                    var payload = new B2BAnalyticsPayload
+                    var payload = new B2BWebhookPayload
                     {
                         runId = runId,
                         webhookType = "smoke_test",
@@ -295,8 +295,8 @@ namespace susaplay.SDK.Samples
                         timestampUtc = DateTime.UtcNow.ToString("o")
                     };
 
-                    SusaPlaySDK.Analytics.LogB2BEvent(payload);
-                    await WithTimeout(SusaPlaySDK.Analytics.Flush(), defaultTimeoutMs);
+                    SusaPlaySDK.Webhooks.SendEvent("smoke_test", payload);
+                    await Task.CompletedTask;
                     return true;
                 }
             );
@@ -619,7 +619,7 @@ namespace susaplay.SDK.Samples
         }
 
         [Serializable]
-        private class B2BAnalyticsPayload
+        private class B2BWebhookPayload
         {
             public string runId;
             public string webhookType;

@@ -6,6 +6,7 @@ All notable changes to `com.susaplay.sdk` should be documented in this file.
 
 Added:
 
+- `SusaPlaySDK.Webhooks.SendEvent(...)` for partner-facing B2B webhook events
 - `PurchasesModule.GetStoreItems()`
 - `PurchasesModule.GetTopupPacks()`
 - `PurchasesModule.GetPlatformWallet()`
@@ -15,6 +16,8 @@ Added:
 
 Changed:
 
+- WebGL analytics now sends `SDK_LOG_EVENT` through the shell bridge instead of using the hardcoded production Functions URL
+- `AnalyticsModule.LogB2BEvent(...)` is deprecated; use `SusaPlaySDK.Webhooks.SendEvent(...)`
 - Xsolla purchase messaging now supports explicit purchase intents
 - README examples now describe direct-item purchases and wallet top-ups
 - platform commerce contract now includes store catalog fetch for games
