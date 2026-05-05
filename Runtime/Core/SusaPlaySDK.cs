@@ -137,10 +137,18 @@ namespace susaplay.SDK
             _webhooks = new WebhooksModule(_httpClient, playerData.gameId, playerData.sessionId);
             _purchases = new PurchasesModule(_httpClient, playerData.gameId);
             _purchases.Initialize();
-            var flusherGO = new GameObject("SusaPlayAnalyticsFlusher");
-            GameObject.DontDestroyOnLoad(flusherGO);
-            _flusher = flusherGO.AddComponent<AnalyticsFlusher>();
-            _flusher.Initialize(_analytics);
+            if (_config.AutomaticAnalyticsFlushEnabled)
+            {
+                var flusherGO = new GameObject("SusaPlayAnalyticsFlusher");
+                GameObject.DontDestroyOnLoad(flusherGO);
+                _flusher = flusherGO.AddComponent<AnalyticsFlusher>();
+                _flusher.Initialize(
+                    _analytics,
+                    _config.AnalyticsFlushIntervalSeconds,
+                    _config.FlushAnalyticsOnInitialize,
+                    _config.FlushAnalyticsOnPause,
+                    _config.FlushAnalyticsOnQuit);
+            }
             WebGLBridge.OnMessageReceived -= HandleInitMessage;
             Logger.Log("SusaPlay SDK Ready.");
             _isInitialized = true;

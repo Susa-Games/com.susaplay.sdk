@@ -6,6 +6,7 @@ All notable changes to `com.susaplay.sdk` should be documented in this file.
 
 Added:
 
+- Automatic analytics flushing on SDK ready, app pause/quit, and a configurable interval that defaults to 5 minutes
 - `SusaPlaySDK.Webhooks.SendEvent(...)` for partner-facing B2B webhook events
 - `PurchasesModule.GetStoreItems()`
 - `PurchasesModule.GetTopupPacks()`

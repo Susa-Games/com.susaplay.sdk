@@ -66,6 +66,9 @@ Available methods:
 Notes:
 
 - Events are queued locally and flushed through the platform shell
+- The SDK flushes analytics automatically by default: on SDK ready, on app pause/quit, and every 5 minutes
+- `Flush()` is still available for tests or important gameplay checkpoints
+- The automatic flush interval and lifecycle flushes can be changed in `SusaPlay/Setup`
 - Automatic event schema validation is still minimal in this version
 
 ### WebhooksModule
@@ -253,6 +256,8 @@ else
 
 ```csharp
 SusaPlaySDK.Analytics.LogEvent("level_started", "{\"level\":3}");
+
+// Optional: the SDK flushes automatically by default.
 await SusaPlaySDK.Analytics.Flush();
 ```
 
