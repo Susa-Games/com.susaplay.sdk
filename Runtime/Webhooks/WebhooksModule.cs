@@ -88,7 +88,7 @@ namespace susaplay.SDK
             if (parameters != null && parameters.Count > 0)
             {
                 sb.Append(",\"parameters\":");
-                AppendDictionary(sb, parameters);
+                AppendObjectDictionary(sb, parameters);
             }
 
             sb.Append("}");
@@ -153,7 +153,7 @@ namespace susaplay.SDK
                     sb.Append(m.ToString(CultureInfo.InvariantCulture));
                     return;
                 case IDictionary<string, object> typedDictionary:
-                    AppendDictionary(sb, typedDictionary);
+                    AppendObjectDictionary(sb, typedDictionary);
                     return;
                 case IDictionary dictionary:
                     AppendDictionary(sb, dictionary);
@@ -174,7 +174,7 @@ namespace susaplay.SDK
             }
         }
 
-        private static void AppendDictionary(StringBuilder sb, IDictionary<string, object> dictionary)
+        private static void AppendObjectDictionary(StringBuilder sb, IDictionary<string, object> dictionary)
         {
             sb.Append("{");
             var first = true;
