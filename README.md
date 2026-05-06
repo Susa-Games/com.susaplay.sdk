@@ -69,6 +69,7 @@ Notes:
 - The SDK flushes analytics automatically by default: on SDK ready, on app pause/quit, and every 5 minutes
 - `Flush()` is still available for tests or important gameplay checkpoints
 - The automatic flush interval and lifecycle flushes can be changed in `SusaPlay/Setup`
+- Accepted analytics events can be forwarded to webhooks subscribed to `SDK_ANALYTICS_EVENT`
 - Automatic event schema validation is still minimal in this version
 
 ### WebhooksModule
@@ -78,10 +79,10 @@ Available methods:
 - `void SendEvent(string eventName, string payloadJson = "{}")`
 - `void SendEvent(string eventName, object payload)`
 
-Use this for partner-facing B2B events that should be delivered through configured
+Use this for custom operational events that should be delivered through configured
 developer webhooks. Do not send these through analytics unless you also want aggregate
 analytics reporting.
-On WebGL, webhook events are sent through the shell bridge as `SDK_B2B_EVENT`.
+On WebGL, webhook events are sent through the shell bridge as `SDK_CUSTOM_WEBHOOK_EVENT`.
 
 ### PurchasesModule
 
@@ -261,7 +262,7 @@ SusaPlaySDK.Analytics.LogEvent("level_started", "{\"level\":3}");
 await SusaPlaySDK.Analytics.Flush();
 ```
 
-### Log B2B webhook data
+### Send custom webhook data
 
 ```csharp
 SusaPlaySDK.Webhooks.SendEvent(

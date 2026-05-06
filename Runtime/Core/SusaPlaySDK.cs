@@ -134,7 +134,7 @@ namespace susaplay.SDK
             _auth.Initialize(playerData);
             _cloudSave = new CloudSaveModule(_httpClient, playerData.gameId);
             _analytics = new AnalyticsModule(_httpClient, playerData.gameId, playerData.sessionId);
-            _webhooks = new WebhooksModule(_httpClient, playerData.gameId, playerData.sessionId);
+            _webhooks = new WebhooksModule(_httpClient, playerData.gameId, playerData.sessionId, playerData.PlayerIdOrUid());
             _purchases = new PurchasesModule(_httpClient, playerData.gameId);
             _purchases.Initialize();
             if (_config.AutomaticAnalyticsFlushEnabled)

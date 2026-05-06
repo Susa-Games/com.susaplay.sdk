@@ -283,11 +283,11 @@ namespace susaplay.SDK.Samples
             );
 
             await ExecuteCase(
-                "B2B webhook payload",
+                "Custom webhook payload",
                 ExpectedOutcome.Success,
                 async () =>
                 {
-                    var payload = new B2BWebhookPayload
+                    var payload = new CustomWebhookPayload
                     {
                         runId = runId,
                         webhookType = "smoke_test",
@@ -619,7 +619,7 @@ namespace susaplay.SDK.Samples
         }
 
         [Serializable]
-        private class B2BWebhookPayload
+        private class CustomWebhookPayload
         {
             public string runId;
             public string webhookType;

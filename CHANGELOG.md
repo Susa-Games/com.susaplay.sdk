@@ -7,7 +7,7 @@ All notable changes to `com.susaplay.sdk` should be documented in this file.
 Added:
 
 - Automatic analytics flushing on SDK ready, app pause/quit, and a configurable interval that defaults to 5 minutes
-- `SusaPlaySDK.Webhooks.SendEvent(...)` for partner-facing B2B webhook events
+- `SusaPlaySDK.Webhooks.SendEvent(...)` for custom operational webhook events
 - `PurchasesModule.GetStoreItems()`
 - `PurchasesModule.GetTopupPacks()`
 - `PurchasesModule.GetPlatformWallet()`
@@ -18,6 +18,8 @@ Added:
 Changed:
 
 - WebGL analytics now sends `SDK_LOG_EVENT` through the shell bridge instead of using the hardcoded production Functions URL
+- WebGL custom webhook events now send `SDK_CUSTOM_WEBHOOK_EVENT` through the shell bridge
+- Webhook subscriptions now use `CUSTOM_WEBHOOK_EVENT` for `SusaPlaySDK.Webhooks.SendEvent(...)`
 - `AnalyticsModule.LogB2BEvent(...)` is deprecated; use `SusaPlaySDK.Webhooks.SendEvent(...)`
 - Xsolla purchase messaging now supports explicit purchase intents
 - README examples now describe direct-item purchases and wallet top-ups
