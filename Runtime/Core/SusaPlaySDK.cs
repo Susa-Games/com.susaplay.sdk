@@ -21,6 +21,8 @@ namespace susaplay.SDK
         public static WebhooksModule Webhooks => _webhooks;
         private static PurchasesModule _purchases;
         public static PurchasesModule Purchases => _purchases;
+        private static ApiModule _api;
+        public static ApiModule Api => _api;
         private const string SdkVersion = "1.0.0";
         private const int InitTimeoutMs = 15000;
         private static bool _isInitialized;
@@ -137,6 +139,7 @@ namespace susaplay.SDK
             _webhooks = new WebhooksModule(_httpClient, playerData.gameId, playerData.sessionId, playerData.PlayerIdOrUid());
             _purchases = new PurchasesModule(_httpClient, playerData.gameId);
             _purchases.Initialize();
+            _api = new ApiModule();
             if (_config.AutomaticAnalyticsFlushEnabled)
             {
                 var flusherGO = new GameObject("SusaPlayAnalyticsFlusher");

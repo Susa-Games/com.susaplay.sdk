@@ -14,6 +14,7 @@ Added:
 - `PurchasesModule.SpendPlatformWallet(string itemId)`
 - `PurchasesModule.StartDirectItemPurchase(string itemId, bool sandbox = false)`
 - `PurchasesModule.StartWalletTopupPurchase(string topupPackId, bool sandbox = false)`
+- `SusaPlaySDK.Api` for B2B partner API bridge calls from partner iframe embeds
 
 Changed:
 
@@ -24,11 +25,13 @@ Changed:
 - Xsolla purchase messaging now supports explicit purchase intents
 - README examples now describe direct-item purchases and wallet top-ups
 - platform commerce contract now includes store catalog fetch for games
+- README now documents partner API bridge usage and CloudSave progress persistence
 
 Notes:
 
 - `StartXsollaPurchase(bool sandbox = false)` remains for backward compatibility
 - explicit direct-item and wallet-topup methods are now the recommended path
+- partner API bridge calls require admin-configured partner `externalApi` settings
 
 ## [1.2.0] - 2026-04-30
 

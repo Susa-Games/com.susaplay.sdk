@@ -26,6 +26,7 @@ If you use a method that exists in the package, you may use it. If a feature is 
 - `SusaPlaySDK.Analytics`
 - `SusaPlaySDK.Webhooks`
 - `SusaPlaySDK.Purchases`
+- `SusaPlaySDK.Api`
 
 ### AuthModule
 
@@ -83,6 +84,36 @@ Use this for custom operational events that should be delivered through configur
 developer webhooks. Do not send these through analytics unless you also want aggregate
 analytics reporting.
 On WebGL, webhook events are sent through the shell bridge as `SDK_CUSTOM_WEBHOOK_EVENT`.
+
+### ApiModule
+
+Available methods:
+
+- `Task<ApiResult> Get(string endpoint)`
+- `Task<ApiResult> Get(string endpoint, Dictionary<string, string> data)`
+- `Task<ApiResult> Post(string endpoint, string dataJson)`
+- `Task<ApiResult> Request(string method, string endpoint, string dataJson = null)`
+
+Use this only for B2B partner iframe embeds where the game needs partner-owned
+content or services, such as daily questions, live campaign config, or partner
+event data.
+
+The game passes only a relative endpoint:
+
+```csharp
+var result = await SusaPlaySDK.Api.Get("/daily/questions");
+```
+
+Admins configure the partner base URL, allowed endpoint prefixes, and auth secret
+in the SusaPlay admin panel. The secret is injected server-side and is never exposed
+to the game.
+
+Notes:
+
+- endpoints must be relative paths, for example `/daily/questions`
+- only `GET` and `POST` are supported by the current backend bridge
+- the bridge works only in partner iframe embeds
+- use `CloudSave` to store player progress based on partner API content
 
 ### PurchasesModule
 
@@ -269,6 +300,30 @@ SusaPlaySDK.Webhooks.SendEvent(
     "score_threshold",
     "{\"matchId\":\"abc123\",\"score\":4200,\"threshold\":1000}"
 );
+```
+
+### Fetch partner-owned data in a B2B embed
+
+```csharp
+var question = await SusaPlaySDK.Api.Get("/daily/questions");
+
+if (!question.Success)
+{
+    Debug.LogError(question.ErrorCode + ": " + question.ErrorMessage);
+    return;
+}
+
+Debug.Log("Question JSON: " + question.Data);
+
+var progressJson = "{\"questionId\":\"q_2026_05_11\",\"seen\":true}";
+await SusaPlaySDK.CloudSave.Save("daily_question_progress", progressJson);
+```
+
+For POST requests:
+
+```csharp
+var answerJson = "{\"questionId\":\"q_2026_05_11\",\"answer\":\"Paris\"}";
+var result = await SusaPlaySDK.Api.Post("/daily/answer", answerJson);
 ```
 
 ## Commerce Quick Start
