@@ -9,8 +9,8 @@ namespace susaplay.SDK
     {
         private readonly HttpClient _httpClient;
         private readonly string _gameId;
-        private readonly Dictionary<string, TaskCompletionSource<XsollaPurchaseResult>> _pendingRequests =
-            new Dictionary<string, TaskCompletionSource<XsollaPurchaseResult>>();
+        private readonly Dictionary<string, TaskCompletionSource<PurchaseResult>> _pendingRequests =
+            new Dictionary<string, TaskCompletionSource<PurchaseResult>>();
 
         public PurchasesModule(HttpClient httpClient, string gameId)
         {
@@ -32,23 +32,23 @@ namespace susaplay.SDK
         /// For every other caller the purchase is live regardless of this flag.
         /// Sandbox balances live in a separate wallet and never mix with real ones.
         /// </param>
-        public Task<XsollaPurchaseResult> StartXsollaPurchase(bool sandbox = false)
+        public Task<PurchaseResult> StartPurchase(bool sandbox = false)
         {
             return StartDirectItemPurchase(null, sandbox);
         }
 
-        /// <param name="sandbox">See <see cref="StartXsollaPurchase"/> — a request, not a decision.</param>
-        public Task<XsollaPurchaseResult> StartDirectItemPurchase(string itemId, bool sandbox = false)
+        /// <param name="sandbox">See <see cref="StartPurchase"/> — a request, not a decision.</param>
+        public Task<PurchaseResult> StartDirectItemPurchase(string itemId, bool sandbox = false)
         {
-            return StartXsollaPurchaseInternal("direct_item", itemId, null, sandbox);
+            return StartPurchaseInternal("direct_item", itemId, null, sandbox);
         }
 
-        /// <param name="sandbox">See <see cref="StartXsollaPurchase"/> — a request, not a decision.</param>
-        public Task<XsollaPurchaseResult> StartWalletTopupPurchase(string topupPackId, bool sandbox = false)
+        /// <param name="sandbox">See <see cref="StartPurchase"/> — a request, not a decision.</param>
+        public Task<PurchaseResult> StartWalletTopupPurchase(string topupPackId, bool sandbox = false)
         {
             if (string.IsNullOrEmpty(topupPackId))
             {
-                return Task.FromResult(new XsollaPurchaseResult
+                return Task.FromResult(new PurchaseResult
                 {
                     Success = false,
                     Status = "invalid-request",
@@ -57,7 +57,7 @@ namespace susaplay.SDK
                 });
             }
 
-            return StartXsollaPurchaseInternal("wallet_topup", null, topupPackId, sandbox);
+            return StartPurchaseInternal("wallet_topup", null, topupPackId, sandbox);
         }
 
         public async Task<StoreCatalogResult> GetStoreItems()
@@ -238,7 +238,7 @@ namespace susaplay.SDK
             };
         }
 
-        private async Task<XsollaPurchaseResult> StartXsollaPurchaseInternal(
+        private async Task<PurchaseResult> StartPurchaseInternal(
             string intent,
             string itemId,
             string topupPackId,
@@ -246,14 +246,14 @@ namespace susaplay.SDK
         )
         {
             var requestId = Guid.NewGuid().ToString();
-            var tcs = new TaskCompletionSource<XsollaPurchaseResult>();
+            var tcs = new TaskCompletionSource<PurchaseResult>();
             _pendingRequests[requestId] = tcs;
 
             WebGLBridge.SendMessage(new BridgeMessage
             {
-                type = "SDK_XSOLLA_PURCHASE",
+                type = "SDK_PURCHASE",
                 payload = JsonUtility.ToJson(
-                    new XsollaPurchaseRequestPayload
+                    new PurchaseRequestPayload
                     {
                         requestId = requestId,
                         intent = intent,
@@ -269,13 +269,13 @@ namespace susaplay.SDK
             if (completed != tcs.Task)
             {
                 _pendingRequests.Remove(requestId);
-                return new XsollaPurchaseResult
+                return new PurchaseResult
                 {
                     Success = false,
                     RequestId = requestId,
                     Status = "timeout",
                     ErrorCode = "TIMEOUT",
-                    ErrorMessage = "Xsolla purchase request timed out."
+                    ErrorMessage = "Purchase request timed out."
                 };
             }
 
@@ -285,20 +285,20 @@ namespace susaplay.SDK
         private void HandleMessage(string json)
         {
             var message = JsonUtility.FromJson<BridgeMessage>(json);
-            if (message.type != "SDK_XSOLLA_PURCHASE_RESPONSE")
+            if (message.type != "SDK_PURCHASE_RESPONSE")
             {
                 return;
             }
 
-            XsollaPurchaseResponsePayload payload = null;
+            PurchaseResponsePayload payload = null;
             if (!string.IsNullOrEmpty(message.payload))
             {
-                payload = JsonUtility.FromJson<XsollaPurchaseResponsePayload>(message.payload);
+                payload = JsonUtility.FromJson<PurchaseResponsePayload>(message.payload);
             }
 
             if (payload == null || string.IsNullOrEmpty(payload.requestId))
             {
-                Logger.Warn("SDK_XSOLLA_PURCHASE_RESPONSE missing requestId");
+                Logger.Warn("SDK_PURCHASE_RESPONSE missing requestId");
                 return;
             }
 
@@ -308,10 +308,11 @@ namespace susaplay.SDK
             }
 
             _pendingRequests.Remove(payload.requestId);
-            tcs.SetResult(new XsollaPurchaseResult
+            tcs.SetResult(new PurchaseResult
             {
                 Success = payload.success,
                 RequestId = payload.requestId,
+                WalletScope = payload.walletScope,
                 Status = payload.status,
                 Wallet = payload.wallet,
                 PlatformWallet = payload.platformWallet,
@@ -322,27 +323,31 @@ namespace susaplay.SDK
     }
 
     [Serializable]
-    public class XsollaPurchaseResult
+    public class PurchaseResult
     {
         public bool Success;
         /// <summary>Correlation id the shell echoes back. Useful for analytics and for matching
         /// a completed purchase to the request that started it.</summary>
         public string RequestId;
         public string Status;
-        public XsollaWalletSnapshot Wallet;
+        /// <summary>"live" or "sandbox" — which wallet the balance landed in. A
+        /// sandbox purchase credits a separate test wallet that never mixes with
+        /// the real one, so a game showing a balance should say which it is.</summary>
+        public string WalletScope;
+        public GameWalletSnapshot Wallet;
         public PlatformWalletSnapshot PlatformWallet;
         public string ErrorCode;
         public string ErrorMessage;
     }
 
     [Serializable]
-    public class XsollaWalletSnapshot
+    public class GameWalletSnapshot
     {
         public string gameId;
         public float coins;
         public float gems;
         public int version;
-        // Mirrors WalletSummary.lastModified in the shell's xsollaService — the shell already
+        // Mirrors WalletSummary.lastModified in the shell's payment service — the shell already
         // sends it, this class just was not reading it.
         public string lastModified;
     }
@@ -493,7 +498,6 @@ namespace susaplay.SDK
         public string iconUrl;
         public string type;
         public StoreItemPrice price;
-        public string xsollaSku;
         public bool walletPurchaseEnabled;
         public bool walletPurchaseEligible;
         public bool directPurchaseEnabled;
@@ -514,7 +518,6 @@ namespace susaplay.SDK
         public string description;
         public string currency;
         public float amount;
-        public string xsollaSku;
         public bool active;
         public string badge;
         public string iconUrl;
@@ -529,7 +532,7 @@ namespace susaplay.SDK
     }
 
     [Serializable]
-    class XsollaPurchaseRequestPayload
+    class PurchaseRequestPayload
     {
         public string requestId;
         public string intent;
@@ -540,18 +543,19 @@ namespace susaplay.SDK
     }
 
     [Serializable]
-    class XsollaPurchaseResponsePayload
+    class PurchaseResponsePayload
     {
         public string requestId;
         public bool success;
         public string status;
-        public XsollaWalletSnapshot wallet;
+        public string walletScope;
+        public GameWalletSnapshot wallet;
         public PlatformWalletSnapshot platformWallet;
-        public XsollaPurchaseError error;
+        public PurchaseError error;
     }
 
     [Serializable]
-    class XsollaPurchaseError
+    class PurchaseError
     {
         public string code;
         public string message;

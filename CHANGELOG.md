@@ -2,6 +2,36 @@
 
 All notable changes to `com.susaplay.sdk` should be documented in this file.
 
+## [1.5.0] - 2026-09-14
+
+Breaking:
+
+- The purchase API is no longer named after a payment provider. `StartXsollaPurchase` is now
+  `StartPurchase`, `XsollaPurchaseResult` is now `PurchaseResult`, and `XsollaWalletSnapshot` is
+  now `GameWalletSnapshot`. The wire messages `SDK_XSOLLA_PURCHASE` and
+  `SDK_XSOLLA_PURCHASE_RESPONSE` are now `SDK_PURCHASE` and `SDK_PURCHASE_RESPONSE`.
+
+  No deprecated aliases were kept. The old names were renamed rather than bridged because no
+  published game was using them yet; a game built against 1.x must be rebuilt against 2.0.
+
+Added:
+
+- `PurchaseResult.WalletScope` — "live" or "sandbox", which wallet the balance landed in. The
+  server always sent it; nothing read it, so a purchase that credited the developer test wallet
+  looked identical to one that did not credit at all.
+
+Removed:
+
+- `StoreItemEntry.xsollaSku` and `TopupPackEntry.xsollaSku`. The server stopped returning the
+  provider's internal SKU to clients — it is resolved server-side at checkout — so these fields
+  were always empty.
+
+Notes:
+
+- Nothing about the purchase flow changed, only its names. The platform decides which provider
+  takes the payment, and the SDK never needed to know which one that was — carrying the name in
+  the public API meant that switching provider would have broken every game.
+
 ## [1.3.0] - 2026-08-11
 
 Added:

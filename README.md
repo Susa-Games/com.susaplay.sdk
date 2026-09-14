@@ -121,9 +121,9 @@ Notes:
 
 Available methods:
 
-- `Task<XsollaPurchaseResult> StartXsollaPurchase(bool sandbox = false)`
-- `Task<XsollaPurchaseResult> StartDirectItemPurchase(string itemId, bool sandbox = false)`
-- `Task<XsollaPurchaseResult> StartWalletTopupPurchase(string topupPackId, bool sandbox = false)`
+- `Task<PurchaseResult> StartPurchase(bool sandbox = false)`
+- `Task<PurchaseResult> StartDirectItemPurchase(string itemId, bool sandbox = false)`
+- `Task<PurchaseResult> StartWalletTopupPurchase(string topupPackId, bool sandbox = false)`
 - `Task<StoreCatalogResult> GetStoreItems()`
 - `Task<PlatformWalletResult> GetPlatformWallet()`
 - `Task<TopupPacksResult> GetTopupPacks()`
@@ -131,8 +131,8 @@ Available methods:
 
 Notes:
 
-- WebGL purchase flow currently targets Xsolla Pay Station
-- The shell opens Pay Station and returns a structured `SDK_XSOLLA_PURCHASE_RESPONSE`
+- The platform decides which payment provider takes the payment; the game never names one
+- The shell opens the checkout and returns a structured `SDK_PURCHASE_RESPONSE`
 - Successful results may include a refreshed game wallet or platform wallet snapshot
 - Direct item purchases grant inventory after webhook confirmation
 - Wallet top-ups credit the platform wallet after webhook confirmation
@@ -203,7 +203,7 @@ These features are planned, partially stubbed in the wider platform, or expected
 - richer auth flows and auth callbacks
 - custom event helpers beyond raw analytics
 - mobile runtime path
-- broader purchase / economy modules beyond Xsolla Pay Station
+- broader purchase / economy modules
 - stronger save conflict resolution and merge helpers
 - better initialization result objects and diagnostics
 - stronger validation in editor setup flow
@@ -215,7 +215,7 @@ Use Unity Package Manager with a Git URL pinned to a release tag:
 ```json
 {
   "dependencies": {
-    "com.susaplay.sdk": "https://github.com/Susa-Games/com.susaplay.sdk.git#v1.2.3"
+    "com.susaplay.sdk": "https://github.com/Susa-Games/com.susaplay.sdk.git#v1.5.0"
   }
 }
 ```
@@ -223,7 +223,7 @@ Use Unity Package Manager with a Git URL pinned to a release tag:
 You can also use:
 
 - Unity -> Window -> Package Manager -> Add package from git URL
-- `https://github.com/Susa-Games/com.susaplay.sdk.git#v1.2.3`
+- `https://github.com/Susa-Games/com.susaplay.sdk.git#v1.5.0`
 
 Versioning notes:
 
