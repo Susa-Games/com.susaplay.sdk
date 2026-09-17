@@ -37,6 +37,13 @@ Available properties:
 - `Auth.Uid`
 - `Auth.DisplayName`
 
+Available methods:
+
+- `Auth.GetSessionTokenAsync()` — the player's short-lived, game-scoped session token, for a game
+  whose own backend runs outside this platform and needs to know which player is calling it. Send
+  it as `Authorization: Bearer {token}`; that backend then asks the platform who it belongs to.
+  Returns null for a guest, so a feature built on it must degrade rather than fail.
+
 Notes:
 
 - Auth state is populated from `SDK_READY`

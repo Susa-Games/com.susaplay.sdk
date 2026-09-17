@@ -2,6 +2,31 @@
 
 All notable changes to `com.susaplay.sdk` should be documented in this file.
 
+## [1.6.0] - 2026-09-16
+
+Added:
+
+- `SusaPlaySDK.Auth.GetSessionTokenAsync()` — the player's short-lived, game-scoped session token,
+  for a game whose own backend runs outside this platform and needs to know which player is calling
+  it. The SDK already fetched this token for its own HTTP calls; it simply had no way out, because
+  `TokenManager` was held in a private field with no accessor. Nothing about how the token is
+  obtained or cached changed.
+
+  Returns null for a guest, who has no platform account and therefore no identity to mint a token
+  for. A feature built on this must degrade for guests rather than fail.
+
+  The first caller is NotAloneNever, whose match servers run on AWS: the game sends this token to
+  its own match broker, and the broker asks the platform who it belongs to before spending money on
+  a server. Without it there was no way for a game's own backend to tell one player from another,
+  and no path existed that would ever mint the token — the shell only mints one when the game asks,
+  and no game could ask.
+
+Changed:
+
+- `AuthModule.Initialize` takes an optional `TokenManager`. Only `SusaPlaySDK` calls it; a game
+  that somehow did will still compile, and `GetSessionTokenAsync` then returns null with a warning
+  rather than throwing.
+
 ## [1.5.0] - 2026-09-14
 
 Breaking:
