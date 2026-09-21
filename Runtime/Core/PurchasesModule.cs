@@ -516,8 +516,23 @@ namespace susaplay.SDK
         public string topupPackId;
         public string name;
         public string description;
+        /// <summary>The currency the player RECEIVES — normally the platform coin.
+        /// Not what the pack costs; see <see cref="priceCurrency"/>.</summary>
         public string currency;
+        /// <summary>How much of <see cref="currency"/> the pack grants.</summary>
         public float amount;
+        /// <summary>What the pack COSTS, in whole units of <see cref="priceCurrency"/>
+        /// — 0.99 for $0.99. The server always sent this; until 1.7.0 no field
+        /// existed to receive it, so a game could not show a player the price it
+        /// was about to charge them.</summary>
+        public float priceAmount;
+        /// <summary>The same cost in minor units — 99 for $0.99. Money is held as
+        /// whole minor units everywhere on the server; prefer this for any
+        /// comparison or arithmetic and keep <see cref="priceAmount"/> for
+        /// display, so no rounding creeps in.</summary>
+        public int priceAmountMinor;
+        /// <summary>ISO currency the pack is charged in, e.g. "USD".</summary>
+        public string priceCurrency;
         public bool active;
         public string badge;
         public string iconUrl;

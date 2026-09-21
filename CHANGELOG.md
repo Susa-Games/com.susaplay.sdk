@@ -2,6 +2,23 @@
 
 All notable changes to `com.susaplay.sdk` should be documented in this file.
 
+## [1.7.0] - 2026-09-21
+
+Added:
+
+- `TopupPackEntry.priceAmount`, `.priceAmountMinor` and `.priceCurrency` — what a top-up pack
+  actually costs the player. The server has always sent all three; `TopupPackEntry` declared no
+  field for them, so `JsonUtility` dropped them on parse and a game had no way to show a price.
+
+  The fields already on the entry, `amount` and `currency`, are what the player *receives* — 100
+  coins. What they *pay* is `priceAmount` in `priceCurrency` — 0.99 USD. A store panel that shows
+  `amount` as the price tells the player the wrong number, which is exactly what happened while
+  the price fields were missing.
+
+  Use `priceAmountMinor` (99) for comparison or arithmetic and `priceAmount` (0.99) for display.
+  Money is whole minor units everywhere on the server, so keeping the integer authoritative is
+  what stops a rounding error reaching a charge.
+
 ## [1.6.0] - 2026-09-16
 
 Added:

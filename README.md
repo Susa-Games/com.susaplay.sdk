@@ -172,7 +172,7 @@ else
 Current behavior notes:
 
 - `sandbox = true` should be used during integration testing
-- the shell may receive a Pay Station `return` / `close` message before the final
+- the shell may receive a checkout `return` / `close` message before the final
   webhook is fully reflected in UI state, so the shell now checks backend purchase
   status before responding to the SDK
 - use `GetStoreItems()` to build your in-game shop UI from platform data
@@ -358,6 +358,9 @@ if (catalog.Success)
 {
     foreach (var item in catalog.Items)
     {
+        // `price` is what the platform wallet is charged. A real-money direct
+        // purchase is priced in the payment provider's own catalogue and is not
+        // returned here, so do not present this figure as a cash price.
         Debug.Log($"{item.name}: {item.price.amount} {item.price.currency}");
     }
 }
@@ -365,13 +368,38 @@ if (catalog.Success)
 
 ### Top up the SusaPlay wallet
 
+A pack carries two different numbers, and showing the wrong one tells the player a
+price you are not about to charge them:
+
+| Field | Meaning |
+| --- | --- |
+| `amount` + `currency` | what the player **receives** — e.g. 100 coins |
+| `priceAmount` + `priceCurrency` | what the player **pays** — e.g. 0.99 USD |
+| `priceAmountMinor` | the same cost in whole minor units — 99 |
+
+Use `priceAmount` for display and `priceAmountMinor` for any comparison or
+arithmetic; money is held as whole minor units on the server, so keeping the
+integer authoritative is what stops a rounding error reaching a charge.
+
 ```csharp
 var packs = await SusaPlaySDK.Purchases.GetTopupPacks();
-if (packs.Success && packs.Packs.Length > 0)
+if (packs.Success)
 {
-    await SusaPlaySDK.Purchases.StartWalletTopupPurchase(packs.Packs[0].topupPackId, true);
+    foreach (var pack in packs.Packs)
+    {
+        // "Coin 100 — 0.99 USD for 100 coins"
+        Debug.Log($"{pack.name} — {pack.priceAmount} {pack.priceCurrency} for {pack.amount} {pack.currency}");
+    }
+
+    if (packs.Packs.Length > 0)
+    {
+        await SusaPlaySDK.Purchases.StartWalletTopupPurchase(packs.Packs[0].topupPackId, true);
+    }
 }
 ```
+
+`priceAmount`, `priceAmountMinor` and `priceCurrency` need SDK 1.7.0 or newer. On
+an older SDK the fields do not exist and the price cannot be read at all.
 
 ### Spend platform wallet on a supported item
 
