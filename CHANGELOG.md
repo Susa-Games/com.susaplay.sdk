@@ -19,6 +19,19 @@ Added:
   Money is whole minor units everywhere on the server, so keeping the integer authoritative is
   what stops a rounding error reaching a charge.
 
+Fixed:
+
+- `SusaPlaySDK.Initialize()` is now safe to call from more than one component. It guarded on a
+  flag that is only set once `SDK_READY` arrives, so two components calling it in the same frame
+  both ran the whole body: the bridge handler was subscribed twice, the second run replaced the
+  init `TaskCompletionSource`, and `SDK_READY` then completed the same source twice. That threw
+  out of a browser callback, which Unity reports as the fatal "An error occurred running the Unity
+  content on this page" dialog rather than as a catchable exception — and the first caller was
+  left awaiting a source nothing would ever complete.
+
+  Every caller now receives the same in-flight `Task`. A run that fails or times out clears it, so
+  a later call can still retry.
+
 ## [1.6.0] - 2026-09-16
 
 Added:

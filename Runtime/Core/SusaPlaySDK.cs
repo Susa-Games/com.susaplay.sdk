@@ -39,18 +39,42 @@ namespace susaplay.SDK
         private const int InitTimeoutMs = 15000;
         private static bool _isInitialized;
         private static bool _didSendGameLoaded;
+        private static Task _initTask;
 
-        public static async Task Initialize()
+        /// <summary>
+        /// Brings the SDK up. Safe to call from more than one place.
+        ///
+        /// `_isInitialized` is only set once SDK_READY has come back, so two
+        /// components calling this in the same frame both saw it false and both
+        /// ran the whole body: the bridge handler was subscribed twice, the
+        /// second run replaced `_initTcs`, and SDK_READY then completed the same
+        /// source twice and threw out of a native callback — which surfaces as
+        /// Unity's fatal "error running the Unity content on this page" rather
+        /// than as a normal exception. The first caller, meanwhile, awaited a
+        /// source nothing would ever complete.
+        ///
+        /// Handing every caller the same Task is what makes a second call free
+        /// instead of destructive. A failed run clears the field so a retry can
+        /// still happen.
+        /// </summary>
+        public static Task Initialize()
         {
-            if (_isInitialized)
+            if (_initTask != null)
             {
-                return;
+                return _initTask;
             }
 
+            _initTask = InitializeInternal();
+            return _initTask;
+        }
+
+        private static async Task InitializeInternal()
+        {
             _config = SDKConfig.Load();
             if (_config == null)
             {
                 Logger.Error("PlatformConfig asset not found. Run susaplay > Create Config Asset first.");
+                _initTask = null;
                 return;
             }
             WebGLBridge.Initialize();
@@ -60,6 +84,10 @@ namespace susaplay.SDK
             _appCheckManager.Initialize();
             _httpClient = new HttpClient(_config, _tokenManager, _appCheckManager);
             _initTcs = new TaskCompletionSource<string>();
+            // Unsubscribe first, the same way TokenManager.Initialize does: a
+            // handler left over from an earlier attempt would be invoked again
+            // and complete this source a second time.
+            WebGLBridge.OnMessageReceived -= HandleInitMessage;
             WebGLBridge.OnMessageReceived += HandleInitMessage;
             WebGLBridge.SendMessage(new BridgeMessage
             {
@@ -72,6 +100,9 @@ namespace susaplay.SDK
             {
                 WebGLBridge.OnMessageReceived -= HandleInitMessage;
                 Logger.Error("SusaPlay SDK init timed out waiting for SDK_READY.");
+                // Dropped so a later call can try again rather than being handed
+                // this failed run for the lifetime of the process.
+                _initTask = null;
                 return;
             }
             await _initTcs.Task;
@@ -182,7 +213,10 @@ namespace susaplay.SDK
             WebGLBridge.OnMessageReceived -= HandleInitMessage;
             Logger.Log("SusaPlay SDK Ready.");
             _isInitialized = true;
-            _initTcs.SetResult(message.payload);
+            // TrySetResult, not SetResult: this runs inside a callback from the
+            // browser, and throwing here takes down the whole Unity instance
+            // rather than failing one call.
+            _initTcs.TrySetResult(message.payload);
         }
     }
 
