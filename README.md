@@ -23,10 +23,15 @@ If you use a method that exists in the package, you may use it. If a feature is 
 - `await SusaPlaySDK.Initialize()`
 - `SusaPlaySDK.Auth`
 - `SusaPlaySDK.CloudSave`
+- `SusaPlaySDK.Achievements`
 - `SusaPlaySDK.Analytics`
 - `SusaPlaySDK.Webhooks`
 - `SusaPlaySDK.Purchases`
+- `SusaPlaySDK.Ads`
 - `SusaPlaySDK.Api`
+- `SusaPlaySDK.Backend`
+- `SusaPlaySDK.LiveOps`
+- `SusaPlaySDK.GameId`
 
 ### AuthModule
 
@@ -179,6 +184,45 @@ Current behavior notes:
 - use `GetTopupPacks()` to build SusaPlay wallet top-up UI
 - use `SpendPlatformWallet(itemId)` only for items that are wallet-eligible
 
+### AdsModule (v1.8.0+)
+
+```csharp
+var result = await SusaPlaySDK.Ads.ShowRewarded();
+
+// Success and Rewarded are different answers. Grant on Rewarded.
+if (result.Rewarded)
+{
+    // The platform has already credited the reward to the player's wallet.
+    Debug.Log("Reward credited");
+}
+else if (result.Success)
+{
+    // The ad played in full, but the reward was refused — normally the daily
+    // cap or the cooldown, both checked on the server after the ad ends.
+    Debug.Log("Watched, but no reward this time");
+}
+else
+{
+    Debug.LogWarning("Ad failed: " + result.Reason);
+}
+```
+
+Interstitials use `ShowInterstitial()`. They credit nothing, so `Rewarded` is always false and
+`Success` is the only answer that matters.
+
+Current behavior notes:
+
+- the SDK loads no ads itself — it asks the page, which picks a network from the game's ad
+  settings and falls back to a house ad or a placeholder
+- reward amount, daily cap and cooldown are the game's ad settings, set in the developer portal,
+  and are enforced on the server after the ad has played
+- every ad type is gated behind the game's `rewarded.enabled` setting, so an interstitial is
+  refused with `ADS_DISABLED` while rewarded ads are off
+- `Reason` is `ADS_DISABLED` when the game has ads off, `TIMEOUT` when the SDK gives up waiting,
+  and otherwise whatever the chosen network reported
+- nothing here pauses the game: the ad is drawn by the page, over the build, and the game keeps
+  running underneath — set `Time.timeScale = 0` yourself if that matters
+
 ### App Check (v1.2.3+)
 
 The SDK automatically requests a Firebase App Check token from the shell before every API call. No game-side configuration is required.
@@ -206,7 +250,7 @@ This creates or updates:
 
 These features are planned, partially stubbed in the wider platform, or expected to evolve soon. Do not build hard dependencies on them yet unless you are coordinating directly with us.
 
-- rewarded ads and banner ads
+- banner ads
 - richer auth flows and auth callbacks
 - custom event helpers beyond raw analytics
 - mobile runtime path

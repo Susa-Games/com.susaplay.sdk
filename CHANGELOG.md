@@ -2,6 +2,37 @@
 
 All notable changes to `com.susaplay.sdk` should be documented in this file.
 
+## [1.8.0] - 2026-09-29
+
+Added:
+
+- `SusaPlaySDK.Ads` — `ShowRewarded()` and `ShowInterstitial()`, both returning an `AdResult`.
+
+  The platform has implemented rewarded ads for some time: the page hosting a game answers an
+  `SDK_AD_SHOW` message by picking a network from the game's ad settings, falling back to a house
+  ad or a placeholder, and crediting the reward server-side when the ad is watched. The SDK
+  exposed none of it, so a game could only reach ads by writing raw `WebGLBridge` messages against
+  an undocumented contract. This module is that contract, typed.
+
+  `AdResult.Success` and `AdResult.Rewarded` are separate answers and a game must read the second
+  one before granting anything. The reward's daily cap and cooldown are enforced on the server
+  *after* the ad has played, so an ad can finish in full and still credit nothing — `Success` true,
+  `Rewarded` false. Treating `Success` as "pay the player" hands out rewards the platform refused.
+
+  `AdResult.Reason` carries the failure: `ADS_DISABLED` when the game's own settings have ads off,
+  `TIMEOUT` when the SDK gives up waiting, and otherwise whatever the chosen network reported.
+
+  Note that the platform gates *every* ad type behind the game's `rewarded.enabled` setting, so an
+  interstitial is refused with `ADS_DISABLED` while rewarded ads are off, even though it pays no
+  reward.
+
+Fixed:
+
+- The version string sent to the platform in `SDK_INIT` was pinned at `1.6.0` while the package
+  shipped 1.7.0. It is a constant separate from `package.json`, so a release that bumped one and
+  not the other went unnoticed — every 1.7.0 client identified itself as 1.6.0 in the platform's
+  logs, which is the one place the number is read.
+
 ## [1.7.0] - 2026-09-21
 
 Added:

@@ -24,6 +24,10 @@ namespace susaplay.SDK
         public static WebhooksModule Webhooks => _webhooks;
         private static PurchasesModule _purchases;
         public static PurchasesModule Purchases => _purchases;
+        private static AdsModule _ads;
+
+        /// <summary>Rewarded and interstitial ads, shown by the page. See <see cref="AdsModule"/>.</summary>
+        public static AdsModule Ads => _ads;
         private static ApiModule _api;
         public static ApiModule Api => _api;
         private static BackendModule _backend;
@@ -35,7 +39,7 @@ namespace susaplay.SDK
         /// <summary>Canonical platform game id for this build. Empty until initialization completes.</summary>
         public static string GameId { get; private set; } = "";
 
-        private const string SdkVersion = "1.6.0";
+        private const string SdkVersion = "1.8.0";
         private const int InitTimeoutMs = 15000;
         private static bool _isInitialized;
         private static bool _didSendGameLoaded;
@@ -190,6 +194,8 @@ namespace susaplay.SDK
             _webhooks = new WebhooksModule(_httpClient, playerData.gameId, playerData.sessionId, playerData.PlayerIdOrUid());
             _purchases = new PurchasesModule(_httpClient, playerData.gameId);
             _purchases.Initialize();
+            _ads = new AdsModule();
+            _ads.Initialize();
             _api = new ApiModule();
             _backend = new BackendModule(_httpClient);
             _liveOps = new LiveOpsModule(_config.LiveOpsContentBaseUrl, playerData.gameId);
