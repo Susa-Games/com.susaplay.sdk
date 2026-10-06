@@ -13,12 +13,25 @@ namespace susaplay.SDK.Tests
     public sealed class EditorHooksTests
     {
         private readonly List<EditorHttpRequest> _requests = new List<EditorHttpRequest>();
+        private System.Action<string> _savedOutbound;
+        private System.Func<EditorHttpRequest, Task<EditorHttpAnswer>> _savedTransport;
+
+        // The Editor Simulator sets both hooks on every domain reload. Tests replace them, and
+        // must put them back, or the simulator stays disconnected until the next reload.
+        [SetUp]
+        public void SetUp()
+        {
+            _savedOutbound = WebGLBridge.EditorOutbound;
+            _savedTransport = HttpClient.EditorTransport;
+            WebGLBridge.EditorOutbound = null;
+            HttpClient.EditorTransport = null;
+        }
 
         [TearDown]
         public void TearDown()
         {
-            WebGLBridge.EditorOutbound = null;
-            HttpClient.EditorTransport = null;
+            WebGLBridge.EditorOutbound = _savedOutbound;
+            HttpClient.EditorTransport = _savedTransport;
             SusaPlaySDK.ResetStaticState();
             _requests.Clear();
         }
