@@ -311,7 +311,7 @@ You can also use:
 
 Versioning notes:
 
-- Use `#v1.2.3` or another tag when you want a reproducible release install
+- Use a tag such as `#v1.9.1` when you want a reproducible release install
 - Use `#main` only if you intentionally want the moving head of development
 - Use `#latest` for the newest published SDK branch maintained by SusaPlay
 - Use `#release` for the current stable SDK branch maintained by SusaPlay
