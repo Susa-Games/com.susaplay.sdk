@@ -1,0 +1,460 @@
+{
+  "format": 1,
+  "about": [
+    "The contract between the platform and the Unity SDK's Editor Simulator, for the 13 routes the SDK calls.",
+    "backend/tests/test_sdk_contract.py runs every case against the platform's real handlers; the SDK repository keeps a copy and runs every case against its local backend. A change to any of these routes updates this file in the same pull request.",
+    "firestore: the documents the platform starts from. simulatorConfig: what GET /catalog/game/{gameId}/simulator-config exports for them, minus exportedAt; the backend test checks the two agree, and the SDK loads simulatorConfig.",
+    "A case's steps share one state, so state is built through the routes themselves. 'given' seeds what no SDK route can create: the platform wallet balance and the inventory.",
+    "Each step runs as the signed-in player unless 'as' is 'guest', who sends no token. 'expect.data' matches as a subset: every key listed must be present with that value, lists must match in length and order, and numbers compare by value.",
+    "In a body, {\"$repeat\": text, \"count\": n} stands for the text repeated n times, and {\"$repeatItem\": value, \"count\": n} for a list of n copies."
+  ],
+  "player": { "uid": "player-1" },
+  "firestore": {
+    "games/game-1": {
+      "developerUid": "dev-1",
+      "gameKey": "gk_contract",
+      "name": "Contract Game",
+      "status": "active"
+    },
+    "games/game-1/achievements/collector": {
+      "name": "Collector",
+      "description": "Collect three",
+      "type": "incremental",
+      "targetValue": 3,
+      "points": 50
+    },
+    "games/game-1/achievements/first_win": {
+      "name": "First win",
+      "description": "Win once",
+      "type": "oneshot",
+      "points": 100
+    },
+    "games/game-1/achievements/no_target": {
+      "name": "No target",
+      "type": "incremental",
+      "points": 5
+    },
+    "games/game-1/economy_config/game-1": {
+      "currencies": {},
+      "items": {
+        "banner": { "name": "Banner", "type": "durable", "price": { "currency": "coins", "amount": 5 }, "walletPurchaseEnabled": false },
+        "freebie": { "name": "Freebie", "type": "durable", "price": { "currency": "coins", "amount": 0 } },
+        "potion": { "name": "Potion", "type": "consumable", "price": { "currency": "coins", "amount": 10 } },
+        "skin": { "name": "Skin", "type": "durable", "price": { "currency": "gold", "amount": 5 } },
+        "sword": { "name": "Sword", "type": "durable", "price": { "currency": "coins", "amount": 30 } }
+      }
+    },
+    "platform_config/commerce": {
+      "paymentMode": "live",
+      "topupPacks": {
+        "coins_100": {
+          "name": "100 coins",
+          "description": "",
+          "currency": "coins",
+          "amount": 100,
+          "priceAmountMinor": 99,
+          "priceCurrency": "USD",
+          "active": true,
+          "sortOrder": 1
+        },
+        "retired": { "name": "Retired", "currency": "coins", "amount": 5, "active": false }
+      }
+    }
+  },
+  "simulatorConfig": {
+    "format": 1,
+    "game": { "gameId": "game-1", "gameKey": "gk_contract", "name": "Contract Game" },
+    "achievements": [
+      { "achievementId": "collector", "name": "Collector", "description": "Collect three", "iconUrl": null, "type": "incremental", "targetValue": 3, "points": 50 },
+      { "achievementId": "first_win", "name": "First win", "description": "Win once", "iconUrl": null, "type": "oneshot", "targetValue": null, "points": 100 },
+      { "achievementId": "no_target", "name": "No target", "description": null, "iconUrl": null, "type": "incremental", "targetValue": null, "points": 5 }
+    ],
+    "items": {
+      "banner": { "name": "Banner", "type": "durable", "price": { "currency": "coins", "amount": 5 }, "walletPurchaseEnabled": false },
+      "freebie": { "name": "Freebie", "type": "durable", "price": { "currency": "coins", "amount": 0 } },
+      "potion": { "name": "Potion", "type": "consumable", "price": { "currency": "coins", "amount": 10 } },
+      "skin": { "name": "Skin", "type": "durable", "price": { "currency": "gold", "amount": 5 } },
+      "sword": { "name": "Sword", "type": "durable", "price": { "currency": "coins", "amount": 30 } }
+    },
+    "adSettings": {
+      "provider": "google-adsense",
+      "overlay": { "enabled": true, "leftSlotId": null, "rightSlotId": null },
+      "rewarded": { "enabled": true, "adUnitId": null, "rewardAmount": 50, "maxPerDay": 10, "cooldownMinutes": 30 }
+    },
+    "responses": {
+      "storeItems": {
+        "gameId": "game-1",
+        "currencies": {},
+        "currencyList": [],
+        "items": [
+          { "itemId": "banner", "name": "Banner", "description": "", "iconUrl": null, "type": "durable", "price": { "currency": "coins", "amount": 5 }, "walletPurchaseEnabled": false, "walletPurchaseEligible": false, "directPurchaseEnabled": true },
+          { "itemId": "freebie", "name": "Freebie", "description": "", "iconUrl": null, "type": "durable", "price": { "currency": "coins", "amount": 0 }, "walletPurchaseEnabled": true, "walletPurchaseEligible": true, "directPurchaseEnabled": true },
+          { "itemId": "potion", "name": "Potion", "description": "", "iconUrl": null, "type": "consumable", "price": { "currency": "coins", "amount": 10 }, "walletPurchaseEnabled": true, "walletPurchaseEligible": true, "directPurchaseEnabled": true },
+          { "itemId": "skin", "name": "Skin", "description": "", "iconUrl": null, "type": "durable", "price": { "currency": "gold", "amount": 5 }, "walletPurchaseEnabled": true, "walletPurchaseEligible": false, "directPurchaseEnabled": true },
+          { "itemId": "sword", "name": "Sword", "description": "", "iconUrl": null, "type": "durable", "price": { "currency": "coins", "amount": 30 }, "walletPurchaseEnabled": true, "walletPurchaseEligible": true, "directPurchaseEnabled": true }
+        ]
+      },
+      "topupPacks": {
+        "topupPacks": [
+          { "topupPackId": "coins_100", "name": "100 coins", "description": "", "currency": "coins", "amount": 100.0, "priceAmountMinor": 99, "priceAmount": 0.99, "priceCurrency": "USD", "active": true, "badge": null, "iconUrl": null, "sortOrder": 1 }
+        ],
+        "paymentMode": "live"
+      }
+    }
+  },
+  "cases": [
+    {
+      "name": "a guest is refused on every route",
+      "steps": [
+        { "as": "guest", "method": "GET", "path": "/save/read?gameId=game-1&slot=a",
+          "expect": { "status": 401, "error": { "code": "UNAUTHENTICATED", "message": "Missing or invalid Authorization header" } } },
+        { "as": "guest", "method": "POST", "path": "/economy/platform-wallet/spend", "body": { "gameId": "game-1", "itemId": "sword" },
+          "expect": { "status": 401, "error": { "code": "UNAUTHENTICATED" } } },
+        { "as": "guest", "method": "POST", "path": "/webhooks/event", "body": { "gameId": "game-1", "sessionId": "s", "eventName": "x", "payload": {} },
+          "expect": { "status": 401, "error": { "code": "UNAUTHENTICATED" } } }
+      ]
+    },
+    {
+      "name": "the session token refuses another game",
+      "steps": [
+        { "method": "GET", "path": "/save/read?gameId=other-game&slot=a",
+          "expect": { "status": 403, "error": { "code": "FORBIDDEN", "message": "This session is scoped to a different game" } } },
+        { "method": "POST", "path": "/webhooks/event", "body": { "gameId": "other-game", "sessionId": "s", "eventName": "x", "payload": {} },
+          "expect": { "status": 403, "error": { "code": "FORBIDDEN", "message": "This session is scoped to a different game" } } }
+      ]
+    },
+    {
+      "name": "the session token supplies the game a request leaves out",
+      "steps": [
+        { "method": "GET", "path": "/economy/inventory",
+          "expect": { "status": 200, "data": { "gameId": "game-1" } } }
+      ]
+    },
+
+    {
+      "name": "reading a slot that was never written",
+      "steps": [
+        { "method": "GET", "path": "/save/read?gameId=game-1&slot=a",
+          "expect": { "status": 200, "data": { "slot": "a", "data": "", "version": 0, "savedAt": null, "exists": false } } }
+      ]
+    },
+    {
+      "name": "a new slot accepts any version and an object is stored as Python writes it",
+      "steps": [
+        { "method": "POST", "path": "/save/write", "body": { "gameId": "game-1", "slot": "a", "data": { "coins": 5, "name": "é" }, "version": 7 },
+          "expect": { "status": 200, "data": { "slot": "a", "version": 8 } } },
+        { "method": "GET", "path": "/save/read?gameId=game-1&slot=a",
+          "expect": { "status": 200, "data": { "slot": "a", "data": "{\"coins\": 5, \"name\": \"\\u00e9\"}", "version": 8, "exists": true } } }
+      ]
+    },
+    {
+      "name": "a string is stored as it is",
+      "steps": [
+        { "method": "POST", "path": "/save/write", "body": { "gameId": "game-1", "slot": "a", "data": "plain text", "version": 0 },
+          "expect": { "status": 200, "data": { "version": 1 } } },
+        { "method": "GET", "path": "/save/read?gameId=game-1&slot=a",
+          "expect": { "status": 200, "data": { "data": "plain text", "version": 1 } } }
+      ]
+    },
+    {
+      "name": "a write with a stale version conflicts",
+      "steps": [
+        { "method": "POST", "path": "/save/write", "body": { "gameId": "game-1", "slot": "a", "data": {}, "version": 0 },
+          "expect": { "status": 200, "data": { "version": 1 } } },
+        { "method": "POST", "path": "/save/write", "body": { "gameId": "game-1", "slot": "a", "data": {}, "version": 0 },
+          "expect": { "status": 409, "error": { "code": "VERSION_CONFLICT", "message": "Version mismatch — fetch latest and retry" } } },
+        { "method": "POST", "path": "/save/write", "body": { "gameId": "game-1", "slot": "a", "data": {}, "version": 1 },
+          "expect": { "status": 200, "data": { "version": 2 } } }
+      ]
+    },
+    {
+      "name": "save writes are validated",
+      "steps": [
+        { "method": "POST", "path": "/save/write", "body": { "gameId": "game-1", "slot": "a", "version": 0 },
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "Missing required fields: gameId, slot, data, version" } } },
+        { "method": "POST", "path": "/save/write", "body": { "gameId": "game-1", "slot": "a", "data": null, "version": 0 },
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "Field 'data' cannot be null" } } },
+        { "method": "POST", "path": "/save/write", "body": { "gameId": "game-1", "slot": "a", "data": {}, "version": 1.0 },
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "Field 'version' must be a non-negative integer" } } },
+        { "method": "POST", "path": "/save/write", "body": { "gameId": "game-1", "slot": "a", "data": {}, "version": -1 },
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "Field 'version' must be a non-negative integer" } } },
+        { "method": "POST", "path": "/save/write", "body": { "gameId": "game-1", "slot": "a", "data": { "$repeat": "x", "count": 500001 }, "version": 0 },
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "Data exceeds 500KB limit" } } },
+        { "method": "POST", "path": "/save/write", "body": { "gameId": "game-1", "slot": "a", "data": { "$repeat": "x", "count": 500000 }, "version": 0 },
+          "expect": { "status": 200, "data": { "version": 1 } } }
+      ]
+    },
+    {
+      "name": "a save read needs a slot",
+      "steps": [
+        { "method": "GET", "path": "/save/read?gameId=game-1",
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "Missing required params: gameId, slot" } } }
+      ]
+    },
+
+    {
+      "name": "an achievement that is not registered is not found",
+      "steps": [
+        { "method": "POST", "path": "/engagement/achievements/unlock", "body": { "gameId": "game-1", "achievementId": "frist_win" },
+          "expect": { "status": 404, "error": { "code": "NOT_FOUND", "message": "Achievement is not registered for this game. Add it in the developer portal before unlocking it." } } },
+        { "method": "POST", "path": "/engagement/achievements/increment", "body": { "gameId": "game-1", "achievementId": "frist_win" },
+          "expect": { "status": 404, "error": { "code": "NOT_FOUND" } } }
+      ]
+    },
+    {
+      "name": "unlocking awards points once and raises the level",
+      "steps": [
+        { "method": "POST", "path": "/engagement/achievements/unlock", "body": { "gameId": "game-1", "achievementId": "first_win" },
+          "expect": { "status": 200, "data": { "achievementId": "first_win", "newlyUnlocked": true, "points": 100,
+            "progression": { "xp": 100, "level": 2, "xpIntoLevel": 0, "xpForNextLevel": 200, "nextLevelAtXp": 300 } } } },
+        { "method": "POST", "path": "/engagement/achievements/unlock", "body": { "gameId": "game-1", "achievementId": "first_win" },
+          "expect": { "status": 200, "data": { "newlyUnlocked": false, "points": 100, "progression": { "xp": 100, "level": 2 } } } }
+      ]
+    },
+    {
+      "name": "unlock and increment each take only their own type",
+      "steps": [
+        { "method": "POST", "path": "/engagement/achievements/unlock", "body": { "gameId": "game-1", "achievementId": "collector" },
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "Achievement is not oneshot" } } },
+        { "method": "POST", "path": "/engagement/achievements/increment", "body": { "gameId": "game-1", "achievementId": "first_win" },
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "Achievement is not incremental" } } },
+        { "method": "POST", "path": "/engagement/achievements/increment", "body": { "gameId": "game-1", "achievementId": "no_target" },
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "Achievement targetValue missing" } } }
+      ]
+    },
+    {
+      "name": "achievement requests are validated",
+      "steps": [
+        { "method": "POST", "path": "/engagement/achievements/unlock", "body": { "gameId": "game-1" },
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "Missing required fields: gameId, achievementId" } } },
+        { "method": "POST", "path": "/engagement/achievements/increment", "body": { "gameId": "game-1", "achievementId": "collector", "incrementBy": 0 },
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "incrementBy must be > 0" } } },
+        { "method": "POST", "path": "/engagement/achievements/increment", "body": { "gameId": "game-1", "achievementId": "collector", "incrementBy": "abc" },
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "incrementBy must be a number" } } },
+        { "method": "POST", "path": "/engagement/achievements/increment", "body": { "gameId": "game-1", "achievementId": "collector", "incrementBy": null },
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "incrementBy must be a number" } } }
+      ]
+    },
+    {
+      "name": "increment unlocks when the counter reaches the target",
+      "steps": [
+        { "method": "POST", "path": "/engagement/achievements/increment", "body": { "gameId": "game-1", "achievementId": "collector", "incrementBy": 2 },
+          "expect": { "status": 200, "data": { "achievementId": "collector", "currentValue": 2, "targetValue": 3, "justUnlocked": false, "points": 0 } } },
+        { "method": "POST", "path": "/engagement/achievements/increment", "body": { "gameId": "game-1", "achievementId": "collector" },
+          "expect": { "status": 200, "data": { "currentValue": 3, "justUnlocked": true, "points": 50, "progression": { "xp": 50, "level": 1 } } } },
+        { "method": "POST", "path": "/engagement/achievements/increment", "body": { "gameId": "game-1", "achievementId": "collector" },
+          "expect": { "status": 200, "data": { "currentValue": 4, "justUnlocked": false, "points": 0 } } }
+      ]
+    },
+    {
+      "name": "the list shows every definition with the player's progress",
+      "steps": [
+        { "method": "POST", "path": "/engagement/achievements/increment", "body": { "gameId": "game-1", "achievementId": "collector" },
+          "expect": { "status": 200 } },
+        { "method": "GET", "path": "/engagement/achievements/list?gameId=game-1",
+          "expect": { "status": 200, "data": { "achievements": [
+            { "achievementId": "collector", "name": "Collector", "type": "incremental", "targetValue": 3, "currentValue": 1, "points": 50, "unlocked": false, "unlockedAt": null },
+            { "achievementId": "first_win", "type": "oneshot", "targetValue": null, "currentValue": null, "points": 100, "unlocked": false },
+            { "achievementId": "no_target", "type": "incremental", "targetValue": null, "currentValue": 0, "unlocked": false }
+          ] } } }
+      ]
+    },
+
+    {
+      "name": "analytics counts only named events",
+      "steps": [
+        { "method": "POST", "path": "/analytics/event",
+          "body": { "gameId": "game-1", "sessionId": "s", "events": [ { "name": "a", "params": {} }, { "name": "  " }, { "params": {} }, "not an object" ] },
+          "expect": { "status": 200, "data": { "accepted": 1, "delivered": 0 } } }
+      ]
+    },
+    {
+      "name": "analytics accepts a level_up without a level",
+      "steps": [
+        { "method": "POST", "path": "/analytics/event",
+          "body": { "gameId": "game-1", "sessionId": "s", "events": [ { "name": "level_up", "params": "{}" } ] },
+          "expect": { "status": 200, "data": { "accepted": 1 } } }
+      ]
+    },
+    {
+      "name": "analytics batches are validated",
+      "steps": [
+        { "method": "POST", "path": "/analytics/event", "body": { "gameId": "game-1", "events": [ { "name": "a" } ] },
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "Missing required fields: gameId, sessionId" } } },
+        { "method": "POST", "path": "/analytics/event", "body": { "gameId": "game-1", "sessionId": "s", "events": [] },
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "Missing required field: events[]" } } },
+        { "method": "POST", "path": "/analytics/event", "body": { "gameId": "game-1", "sessionId": "s", "events": { "$repeatItem": { "name": "a" }, "count": 501 } },
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "Maximum 500 events per batch" } } },
+        { "method": "POST", "path": "/analytics/event", "body": { "gameId": "game-1", "sessionId": "s", "events": { "$repeatItem": { "name": "a" }, "count": 500 } },
+          "expect": { "status": 200, "data": { "accepted": 500 } } }
+      ]
+    },
+
+    {
+      "name": "a custom level_up needs a level",
+      "steps": [
+        { "method": "POST", "path": "/webhooks/event", "body": { "gameId": "game-1", "sessionId": "s", "eventName": "level_up", "payload": { "parameters": {} } },
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "level_up requires payload.level as a non-negative integer" } } },
+        { "method": "POST", "path": "/webhooks/event", "body": { "gameId": "game-1", "sessionId": "s", "eventName": "level_up", "payload": { "level": -1 } },
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT" } } },
+        { "method": "POST", "path": "/webhooks/event", "body": { "gameId": "game-1", "sessionId": "s", "eventName": "level_up", "payload": { "value": 4, "parameters": {} } },
+          "expect": { "status": 200, "data": { "delivered": 0 } } },
+        { "method": "POST", "path": "/webhooks/event", "body": { "gameId": "game-1", "sessionId": "s", "eventName": "level_up", "payload": { "parameters": { "level": "7" } } },
+          "expect": { "status": 200 } }
+      ]
+    },
+    {
+      "name": "custom events are validated",
+      "steps": [
+        { "method": "POST", "path": "/webhooks/event", "body": { "gameId": "game-1", "eventName": "x", "payload": {} },
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "Missing required fields: gameId, sessionId" } } },
+        { "method": "POST", "path": "/webhooks/event", "body": { "gameId": "game-1", "sessionId": "s", "payload": {} },
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "Missing required field: eventName" } } },
+        { "method": "POST", "path": "/webhooks/event", "body": { "gameId": "game-1", "sessionId": "s", "eventName": "x", "payload": "text" },
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "payload must be an object" } } },
+        { "method": "POST", "path": "/webhooks/event", "body": { "gameId": "game-1", "sessionId": "s", "name": "x", "data": { "a": 1 } },
+          "expect": { "status": 200, "data": { "delivered": 0 } } }
+      ]
+    },
+    {
+      "name": "a custom achievement_unlocked event unlocks the achievement",
+      "steps": [
+        { "method": "POST", "path": "/webhooks/event", "body": { "gameId": "game-1", "sessionId": "s", "eventName": "achievement_unlocked", "payload": { "parameters": { "achievementId": "first_win" } } },
+          "expect": { "status": 200, "data": { "delivered": 0, "achievement": { "achievementId": "first_win", "newlyUnlocked": true, "points": 100 } } } },
+        { "method": "POST", "path": "/webhooks/event", "body": { "gameId": "game-1", "sessionId": "s", "eventName": "achievement_unlocked", "payload": { "parameters": {} } },
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "achievement_unlocked requires payload.achievementId" } } },
+        { "method": "POST", "path": "/webhooks/event", "body": { "gameId": "game-1", "sessionId": "s", "eventName": "achievement_unlocked", "payload": { "achievementId": "nope" } },
+          "expect": { "status": 404, "error": { "code": "NOT_FOUND" } } }
+      ]
+    },
+
+    {
+      "name": "the store and the top-up packs are the platform's own answers",
+      "steps": [
+        { "method": "GET", "path": "/economy/store-items?gameId=game-1",
+          "expect": { "status": 200, "data": { "gameId": "game-1", "items": [
+            { "itemId": "banner", "walletPurchaseEligible": false },
+            { "itemId": "freebie" },
+            { "itemId": "potion", "type": "consumable" },
+            { "itemId": "skin", "walletPurchaseEligible": false },
+            { "itemId": "sword", "price": { "currency": "coins", "amount": 30 }, "walletPurchaseEligible": true }
+          ] } } },
+        { "method": "GET", "path": "/economy/topup-packs",
+          "expect": { "status": 200, "data": { "topupPacks": [ { "topupPackId": "coins_100", "amount": 100, "priceAmountMinor": 99 } ], "paymentMode": "live" } } }
+      ]
+    },
+    {
+      "name": "the first wallet read completes the migration",
+      "steps": [
+        { "method": "GET", "path": "/economy/platform-wallet",
+          "expect": { "status": 200, "data": { "walletId": "platform", "walletScope": "live", "coins": 0, "gems": 0, "version": 1,
+            "migration": { "status": "completed", "migratedWalletCount": 0, "unsupportedCurrencies": [] } } } },
+        { "method": "GET", "path": "/economy/platform-wallet",
+          "expect": { "status": 200, "data": { "version": 1 } } }
+      ]
+    },
+    {
+      "name": "spending more than the balance is refused",
+      "steps": [
+        { "method": "POST", "path": "/economy/platform-wallet/spend", "body": { "gameId": "game-1", "itemId": "sword", "requestId": "r1" },
+          "expect": { "status": 409, "error": { "code": "INSUFFICIENT_BALANCE", "message": "Not enough platform wallet balance to complete spend" } } }
+      ]
+    },
+    {
+      "name": "a durable is bought once",
+      "given": { "platformWallet": { "coins": 100 } },
+      "steps": [
+        { "method": "POST", "path": "/economy/platform-wallet/spend", "body": { "gameId": "game-1", "itemId": "sword", "requestId": "r1" },
+          "expect": { "status": 200, "data": { "newBalance": { "coins": 70 }, "walletId": "platform", "walletScope": "live",
+            "platformWallet": { "walletId": "platform", "walletScope": "live", "coins": 70, "gems": 0, "version": 2 },
+            "inventory": { "sword": 1 }, "inventoryList": [ { "key": "sword", "value": 1 } ] } } },
+        { "method": "POST", "path": "/economy/platform-wallet/spend", "body": { "gameId": "game-1", "itemId": "sword", "requestId": "r2" },
+          "expect": { "status": 409, "error": { "code": "DUPLICATE_ITEM", "message": "Durable item is already owned" } } },
+        { "method": "GET", "path": "/economy/platform-wallet",
+          "expect": { "status": 200, "data": { "coins": 70 } } },
+        { "method": "GET", "path": "/economy/inventory?gameId=game-1",
+          "expect": { "status": 200, "data": { "items": { "sword": 1 }, "itemsList": [ { "key": "sword", "value": 1 } ], "consumablesList": [] } } }
+      ]
+    },
+    {
+      "name": "a consumable adds one each time",
+      "given": { "platformWallet": { "coins": 100 } },
+      "steps": [
+        { "method": "POST", "path": "/economy/platform-wallet/spend", "body": { "gameId": "game-1", "itemId": "potion" },
+          "expect": { "status": 200, "data": { "newBalance": { "coins": 90 }, "consumables": { "potion": 1 }, "consumablesList": [ { "key": "potion", "value": 1 } ] } } },
+        { "method": "POST", "path": "/economy/platform-wallet/spend", "body": { "gameId": "game-1", "itemId": "potion" },
+          "expect": { "status": 200, "data": { "newBalance": { "coins": 80 }, "consumablesList": [ { "key": "potion", "value": 2 } ] } } }
+      ]
+    },
+    {
+      "name": "a repeated requestId replays the first spend",
+      "given": { "platformWallet": { "coins": 100 } },
+      "steps": [
+        { "method": "POST", "path": "/economy/platform-wallet/spend", "body": { "gameId": "game-1", "itemId": "potion", "requestId": "r1" },
+          "expect": { "status": 200, "data": { "newBalance": { "coins": 90 } } } },
+        { "method": "POST", "path": "/economy/platform-wallet/spend", "body": { "gameId": "game-1", "itemId": "potion", "requestId": "r1" },
+          "expect": { "status": 200, "data": { "newBalance": { "coins": 90 }, "walletId": "platform", "walletScope": "live", "platformWallet": null, "duplicate": true } } },
+        { "method": "GET", "path": "/economy/platform-wallet",
+          "expect": { "status": 200, "data": { "coins": 90 } } }
+      ]
+    },
+    {
+      "name": "spends are checked against the item",
+      "given": { "platformWallet": { "coins": 100 } },
+      "steps": [
+        { "method": "POST", "path": "/economy/platform-wallet/spend", "body": { "gameId": "game-1" },
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "Missing required fields: gameId, itemId" } } },
+        { "method": "POST", "path": "/economy/platform-wallet/spend", "body": { "gameId": "game-1", "itemId": "shield" },
+          "expect": { "status": 404, "error": { "code": "ITEM_NOT_FOUND", "message": "Item not found in economy config" } } },
+        { "method": "POST", "path": "/economy/platform-wallet/spend", "body": { "gameId": "game-1", "itemId": "banner" },
+          "expect": { "status": 409, "error": { "code": "INVALID_STATE", "message": "Item is not eligible for platform wallet purchases" } } },
+        { "method": "POST", "path": "/economy/platform-wallet/spend", "body": { "gameId": "game-1", "itemId": "skin" },
+          "expect": { "status": 409, "error": { "code": "INVALID_STATE", "message": "Item price is not in a supported platform wallet currency" } } },
+        { "method": "POST", "path": "/economy/platform-wallet/spend", "body": { "gameId": "game-1", "itemId": "freebie" },
+          "expect": { "status": 409, "error": { "code": "INVALID_STATE", "message": "Item price is invalid" } } }
+      ]
+    },
+    {
+      "name": "an empty inventory",
+      "steps": [
+        { "method": "GET", "path": "/economy/inventory?gameId=game-1",
+          "expect": { "status": 200, "data": { "gameId": "game-1", "items": {}, "consumables": {}, "itemsList": [], "consumablesList": [], "itemStates": {}, "lastModified": null } } }
+      ]
+    },
+    {
+      "name": "consume needs an inventory, and enough of the item",
+      "steps": [
+        { "method": "POST", "path": "/economy/consume", "body": { "gameId": "game-1", "itemId": "potion", "quantity": 1 },
+          "expect": { "status": 404, "error": { "code": "ITEM_NOT_FOUND", "message": "Nothing to consume" } } }
+      ]
+    },
+    {
+      "name": "consume uses up what the player owns",
+      "given": { "inventory": { "consumables": { "potion": 2 } } },
+      "steps": [
+        { "method": "POST", "path": "/economy/consume", "body": { "gameId": "game-1", "itemId": "potion", "quantity": 3 },
+          "expect": { "status": 409, "error": { "code": "INSUFFICIENT_ITEMS", "message": "Not enough of that item to consume" } } },
+        { "method": "POST", "path": "/economy/consume", "body": { "gameId": "game-1", "itemId": "potion", "quantity": 0, "requestId": "c1" },
+          "expect": { "status": 200, "data": { "itemId": "potion", "remaining": 1, "consumables": { "potion": 1 }, "consumablesList": [ { "key": "potion", "value": 1 } ] } } },
+        { "method": "POST", "path": "/economy/consume", "body": { "gameId": "game-1", "itemId": "potion", "quantity": 1, "requestId": "c1" },
+          "expect": { "status": 200, "data": { "itemId": "potion", "remaining": 1, "duplicate": true } } },
+        { "method": "POST", "path": "/economy/consume", "body": { "gameId": "game-1", "itemId": "potion" },
+          "expect": { "status": 200, "data": { "remaining": 0, "consumables": {}, "consumablesList": [] } } },
+        { "method": "POST", "path": "/economy/consume", "body": { "gameId": "game-1", "itemId": "potion" },
+          "expect": { "status": 409, "error": { "code": "INSUFFICIENT_ITEMS" } } }
+      ]
+    },
+    {
+      "name": "consume requests are validated",
+      "given": { "inventory": { "consumables": { "potion": 2 } } },
+      "steps": [
+        { "method": "POST", "path": "/economy/consume", "body": { "gameId": "game-1", "quantity": 1 },
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "Missing required fields: gameId, itemId" } } },
+        { "method": "POST", "path": "/economy/consume", "body": { "gameId": "game-1", "itemId": "potion", "quantity": "many" },
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "quantity must be a number" } } },
+        { "method": "POST", "path": "/economy/consume", "body": { "gameId": "game-1", "itemId": "potion", "quantity": 1001 },
+          "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "quantity must be between 1 and 1000" } } }
+      ]
+    }
+  ]
+}

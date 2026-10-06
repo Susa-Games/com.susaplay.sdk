@@ -2,6 +2,39 @@
 
 All notable changes to `com.susaplay.sdk` should be documented in this file.
 
+## [1.9.0] - 2026-10-06
+
+Added:
+
+- The Editor Simulator. In the Unity Editor the SDK no longer waits 15 seconds for a page that
+  does not exist and leaves every module null: the simulator answers instead, so a game's
+  integration can be tested in Play Mode without a WebGL build. Open it with
+  `SusaPlay -> Simulator`; the README's "Test in the Unity Editor" covers it in full.
+
+  It has two halves. The Editor Shell plays the page's part of the bridge — `SDK_READY`, tokens,
+  checkout, ads, sign-in — as the player portal's play page does. The local backend answers the
+  13 routes the SDK's modules call with the platform's rules, status codes, error codes, messages
+  and response shapes, quirks included, from state kept in `Library/SusaPlaySimulator/`. Nothing
+  leaves the machine and nothing is written to the platform.
+
+  To keep the two implementations of those routes the same, the platform publishes contract
+  cases it proves against its real handlers; `Tests/Editor/Contract/` holds a copy and an
+  EditMode test runs every case against the simulator.
+
+  A game's achievements, store, top-up packs and ad settings come from a file the developer
+  downloads from the game's page in the Developer Portal and imports in the window. Without it
+  the simulator behaves like the platform for a game with nothing configured.
+
+- `SusaPlaySDK.IsSimulated` — true while the simulator is answering, always false in a build. For
+  a debug badge only.
+
+Changed:
+
+- `WebGLBridge` and `HttpClient` have Editor-only hooks the simulator sets. They compile only
+  under `UNITY_EDITOR` and are internal, so builds and the public API are unchanged.
+- In the Editor, the simulated HTTP path does not request an App Check token; the simulator does
+  not check one.
+
 ## [1.8.1] - 2026-10-06
 
 Fixed:

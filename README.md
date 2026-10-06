@@ -2,7 +2,7 @@
 
 Unity SDK package for integrating games with the SusaPlay platform.
 
-Latest stable release tag: `v1.2.3`
+Latest stable release tag: `v1.9.0`
 
 This package is intended for games that run inside the SusaPlay shell on WebGL today. The current implementation is real and usable, but still evolving. We are intentionally exposing all implemented methods so game teams can integrate early and help us tune the SDK against real game behavior.
 
@@ -238,13 +238,46 @@ If the shell does not respond within 5 seconds (older shells), the SDK proceeds 
 
 ### Editor Tooling
 
-Available menu:
+Available menus:
 
-- `SusaPlay -> Setup`
+- `SusaPlay -> Setup` creates or updates `Assets/Resources/PlatformConfig.asset`
+- `SusaPlay -> Simulator` opens the Editor Simulator (v1.9.0+, below)
 
-This creates or updates:
+### Test in the Unity Editor (v1.9.0+)
 
-- `Assets/Resources/PlatformConfig.asset`
+Press Play and the SDK works: in the Unity Editor the Editor Simulator answers the game instead
+of the SusaPlay page and platform, so an integration can be tested without a WebGL build.
+
+- Nothing leaves the machine and nothing is written to the platform. Saves, achievements, the
+  wallet and the inventory are kept in `Library/SusaPlaySimulator/` until you press **Reset**.
+- The simulator answers with the platform's own rules, error codes and response shapes — a stale
+  save version gets `409 VERSION_CONFLICT`, an achievement that is not registered gets
+  `404 NOT_FOUND` — so the game's code takes the paths it will take in production. The rules are
+  pinned by contract cases the platform proves against its real handlers
+  (`Tests/Editor/Contract/`).
+- The player is signed in by default; switch to **Guest** in the window to test the guest path,
+  and **Sign in** during Play as the page's sign-in prompt does.
+- Purchases are paid and ads complete automatically. Set either to **Ask** to answer each one in
+  the window (paid, canceled, closed; complete, skip, no ad).
+- **Next request fails** makes the next request to a route fail with `401`, `500` or a network
+  error, to test the game's error handling.
+- The request log shows every message and request with the platform's verdict. Anything the
+  platform would refuse, or accept and quietly drop, is also a Console warning.
+
+For your game's achievements, store, top-up packs and ad settings, open the game in the Developer
+Portal, click **Download for Unity Editor**, and import the file under **SusaPlay -> Simulator ->
+Import configuration…**. It is stored in `ProjectSettings/`, so commit it and the team shares it;
+nothing in it is secret, and it never reaches a build. Without it the simulator behaves like the
+platform for a game with nothing configured: an empty store and every achievement `NOT_FOUND`.
+
+`SusaPlaySDK.IsSimulated` is true while the simulator is answering. Use it for a debug badge only:
+a game that behaves differently when it is true is no longer testing what players will run.
+
+Still test a WebGL build in the SusaPlay shell (a build preview in the Developer Portal) before
+release. The simulator cannot show WebGL and IL2CPP differences (code stripping, threads),
+browser behaviour, load time, the real checkout, real ads, App Check, or webhook delivery. Builds
+contain none of the simulator: it lives in the Editor assembly, and its hooks compile only in the
+Editor.
 
 ## Planned / In Progress
 
@@ -266,7 +299,7 @@ Use Unity Package Manager with a Git URL pinned to a release tag:
 ```json
 {
   "dependencies": {
-    "com.susaplay.sdk": "https://github.com/Susa-Games/com.susaplay.sdk.git#v1.5.0"
+    "com.susaplay.sdk": "https://github.com/Susa-Games/com.susaplay.sdk.git#v1.9.0"
   }
 }
 ```
@@ -274,7 +307,7 @@ Use Unity Package Manager with a Git URL pinned to a release tag:
 You can also use:
 
 - Unity -> Window -> Package Manager -> Add package from git URL
-- `https://github.com/Susa-Games/com.susaplay.sdk.git#v1.5.0`
+- `https://github.com/Susa-Games/com.susaplay.sdk.git#v1.9.0`
 
 Versioning notes:
 
@@ -465,7 +498,8 @@ This package currently depends on the SusaPlay WebGL shell contract:
 - the shell provides tokens through `SDK_GET_TOKEN`
 - API calls are proxied through shell/backend routing
 
-Direct standalone WebGL hosting is not the supported path for this package today.
+Direct standalone WebGL hosting is not the supported path for this package today. In the Unity
+Editor the Editor Simulator plays the shell's part (see "Test in the Unity Editor").
 
 ## Samples
 
@@ -473,7 +507,8 @@ Included sample:
 
 - `SDK Smoke Test`
 
-Import it from Unity Package Manager samples to validate the integration inside the SusaPlay shell.
+Import it from Unity Package Manager samples to validate the integration in Play Mode, against the
+Editor Simulator, and in a WebGL build inside the SusaPlay shell.
 
 ## Versioning
 
@@ -483,6 +518,7 @@ We recommend pinned Git tags:
 - `v1.1.0`
 - `v1.1.1`
 - `v1.2.3`
+- `v1.9.0`
 
 Guidelines:
 
