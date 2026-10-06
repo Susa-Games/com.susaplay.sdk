@@ -10,9 +10,9 @@ namespace susaplay.SDK
     /// because achievement points feed the player's platform-wide level and a game
     /// that set its own point values could mint level progress at will.
     ///
-    /// Unlocking an id that has not been registered yet is allowed and is not lost:
-    /// it is recorded against the player, worth no points, and starts counting once
-    /// the developer fills in its definition.
+    /// An id must be registered in the developer portal first. Anything else is
+    /// refused with 404 NOT_FOUND and nothing is recorded, so a buggy or hostile
+    /// build cannot create unbounded achievement records.
     /// </summary>
     public class AchievementsModule
     {
