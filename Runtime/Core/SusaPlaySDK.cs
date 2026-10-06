@@ -39,6 +39,23 @@ namespace susaplay.SDK
         /// <summary>Canonical platform game id for this build. Empty until initialization completes.</summary>
         public static string GameId { get; private set; } = "";
 
+        /// <summary>
+        /// True when the Unity Editor Simulator is answering the SDK instead of the platform;
+        /// always false in a build. For debug display only — a game that behaves differently
+        /// when this is true is no longer testing what players will run.
+        /// </summary>
+        public static bool IsSimulated
+        {
+            get
+            {
+#if UNITY_EDITOR
+                return WebGLBridge.EditorOutbound != null && HttpClient.EditorTransport != null;
+#else
+                return false;
+#endif
+            }
+        }
+
         private const string SdkVersion = "1.8.1";
         private const int InitTimeoutMs = 15000;
         private static bool _isInitialized;
