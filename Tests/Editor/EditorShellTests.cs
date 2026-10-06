@@ -175,6 +175,32 @@ namespace susaplay.SDK.Editor.Tests
         }
 
         [Test]
+        public void AnOwnedDurableIsRefusedBeforeCheckout()
+        {
+            Init();
+            _sim.Send("SDK_PURCHASE", "{\"requestId\":\"p1\",\"intent\":\"direct_item\",\"itemId\":\"sword\"}");
+            _sim.Advance();
+            _sim.Send("SDK_PURCHASE", "{\"requestId\":\"p2\",\"intent\":\"direct_item\",\"itemId\":\"sword\"}");
+            _sim.Advance();
+
+            var response = SimulatorFixture.Payload(_sim.LastDelivered("SDK_PURCHASE_RESPONSE"));
+            Assert.AreEqual("p2", response["requestId"]);
+            Assert.AreEqual("token-failed", response["status"]);
+            Assert.AreEqual("Durable item is already owned", ((Dictionary<string, object>)response["error"])["message"]);
+            Assert.IsNull(response["walletScope"], "checkout never opened");
+        }
+
+        [Test]
+        public void APaidPurchaseReportsTheLiveWallet()
+        {
+            Init();
+            _sim.Send("SDK_PURCHASE", "{\"requestId\":\"p1\",\"intent\":\"direct_item\",\"itemId\":\"potion\"}");
+            _sim.Advance();
+
+            Assert.AreEqual("live", SimulatorFixture.Payload(_sim.LastDelivered("SDK_PURCHASE_RESPONSE"))["walletScope"]);
+        }
+
+        [Test]
         public void ACanceledPurchaseGrantsNothing()
         {
             _sim.Settings.purchaseOutcome = PurchaseOutcome.Canceled;

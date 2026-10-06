@@ -439,6 +439,7 @@ namespace susaplay.SDK.Editor.Simulator
 
             var accepted = 0;
             var dropped = 0;
+            var droppedLevelUps = 0;
             var response = new BackendResponse();
             foreach (var entry in events)
             {
@@ -448,21 +449,27 @@ namespace susaplay.SDK.Editor.Simulator
                     dropped++;
                     continue;
                 }
-                accepted++;
                 if (name.Trim() == "level_up")
                 {
                     var parameters = Get(evt, "params") ?? Get(evt, "parameters");
                     if (ParseLevel(Get(NormalizeParams(parameters), "level")) == null)
                     {
-                        response.Warnings.Add(
-                            "Analytics event 'level_up' has no valid params.level (a non-negative integer). The platform accepts it " +
-                            "but stores no level, so level reports will not count it. The same event sent through Webhooks is refused with 400.");
+                        // Dropped by the platform since plan S7: the same rule as /webhooks/event,
+                        // without refusing the rest of the batch.
+                        droppedLevelUps++;
+                        continue;
                     }
                 }
+                accepted++;
             }
             if (dropped > 0)
             {
                 response.Warnings.Add(dropped + " analytics event(s) had no name. The platform drops them without an error.");
+            }
+            if (droppedLevelUps > 0)
+            {
+                response.Warnings.Add(droppedLevelUps + " analytics 'level_up' event(s) had no valid params.level (a non-negative integer). " +
+                                      "The platform drops them without an error, so they never reach level reports.");
             }
 
             response.Status = 200;
@@ -867,7 +874,7 @@ namespace susaplay.SDK.Editor.Simulator
             out BackendResponse error)
         {
             error = null;
-            var durable = PyStr(Truthy(Get(item, "type")) ? Get(item, "type") : "durable").Trim() != "consumable";
+            var durable = IsDurable(item);
             var inventory = State.FindInventory(gameId, true);
             if (durable)
             {
@@ -887,6 +894,12 @@ namespace susaplay.SDK.Editor.Simulator
             inventory.lastModified = Now();
             _save();
             return new GrantResult { Durable = durable, Inventory = inventory };
+        }
+
+        /// <summary>commerce_support._normalize_item_type: anything but "consumable" is durable.</summary>
+        internal static bool IsDurable(Dictionary<string, object> item)
+        {
+            return PyStr(Truthy(Get(item, "type")) ? Get(item, "type") : "durable").Trim() != "consumable";
         }
 
         /// <summary>A paid top-up: the pack's amount, in its currency, into the platform wallet.</summary>

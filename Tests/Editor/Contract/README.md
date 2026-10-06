@@ -2,7 +2,9 @@
 
 `cases.json` is a copy of `backend/tests/sdk_contract/cases.json` in the platform repository.
 
-- Copied from platform commit `ee7339e` ("test: add SDK contract cases for the 13 routes the Unity SDK calls").
+- Copied on 2026-10-06 from the platform's `feature/unity-sandbox` branch, after `ee7339e`, with the
+  cases for the fixes in plan S7 (analytics drops an invalid `level_up`) and S11 (the last of an
+  item is removed beside others).
 - The platform proves every case against its real handlers (`backend/tests/test_sdk_contract.py`).
 - `SdkContractTests.cs` runs every case against the Editor Simulator's local backend.
 

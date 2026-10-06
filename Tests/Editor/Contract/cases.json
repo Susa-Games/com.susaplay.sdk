@@ -269,11 +269,17 @@
       ]
     },
     {
-      "name": "analytics accepts a level_up without a level",
+      "name": "analytics drops a level_up without a valid level and keeps the rest of the batch",
       "steps": [
         { "method": "POST", "path": "/analytics/event",
-          "body": { "gameId": "game-1", "sessionId": "s", "events": [ { "name": "level_up", "params": "{}" } ] },
-          "expect": { "status": 200, "data": { "accepted": 1 } } }
+          "body": { "gameId": "game-1", "sessionId": "s", "events": [
+            { "name": "level_up", "params": "{}" },
+            { "name": "level_up", "params": { "level": -1 } },
+            { "name": "level_up", "params": { "level": "3" } },
+            { "name": "level_up", "parameters": { "level": 4 } },
+            { "name": "match_won" }
+          ] },
+          "expect": { "status": 200, "data": { "accepted": 3, "delivered": 0 } } }
       ]
     },
     {
@@ -440,6 +446,18 @@
           "expect": { "status": 200, "data": { "itemId": "potion", "remaining": 1, "duplicate": true } } },
         { "method": "POST", "path": "/economy/consume", "body": { "gameId": "game-1", "itemId": "potion" },
           "expect": { "status": 200, "data": { "remaining": 0, "consumables": {}, "consumablesList": [] } } },
+        { "method": "POST", "path": "/economy/consume", "body": { "gameId": "game-1", "itemId": "potion" },
+          "expect": { "status": 409, "error": { "code": "INSUFFICIENT_ITEMS" } } }
+      ]
+    },
+    {
+      "name": "consuming the last of one item leaves the others and removes it",
+      "given": { "inventory": { "consumables": { "potion": 1, "bomb": 2 } } },
+      "steps": [
+        { "method": "POST", "path": "/economy/consume", "body": { "gameId": "game-1", "itemId": "potion" },
+          "expect": { "status": 200, "data": { "remaining": 0, "consumables": { "bomb": 2 }, "consumablesList": [ { "key": "bomb", "value": 2 } ] } } },
+        { "method": "GET", "path": "/economy/inventory?gameId=game-1",
+          "expect": { "status": 200, "data": { "consumables": { "bomb": 2 }, "consumablesList": [ { "key": "bomb", "value": 2 } ] } } },
         { "method": "POST", "path": "/economy/consume", "body": { "gameId": "game-1", "itemId": "potion" },
           "expect": { "status": 409, "error": { "code": "INSUFFICIENT_ITEMS" } } }
       ]

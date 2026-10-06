@@ -20,6 +20,8 @@ namespace susaplay.SDK.Editor.Simulator
         public string TopupPackId;
         public string AdType;
         public double StartedAt;
+        /// <summary>True once checkout opened; only then does the shell know the wallet scope.</summary>
+        public bool CheckoutOpened;
 
         /// <summary>The SDK gives up on a purchase or an ad after 180 seconds.</summary>
         public const double SdkTimeoutSeconds = 180;
@@ -341,7 +343,9 @@ namespace susaplay.SDK.Editor.Simulator
                 return;
             }
             IsGuest = false;
-            Send("SDK_AUTH_COMPLETE", PlayerData());
+            var auth = PlayerData();
+            auth["token"] = LocalBackend.TokenFor(_state().uid);
+            Send("SDK_AUTH_COMPLETE", auth);
             Changed?.Invoke();
         }
 
@@ -393,6 +397,7 @@ namespace susaplay.SDK.Editor.Simulator
                 return;
             }
 
+            pending.CheckoutOpened = true;
             var outcome = _settings().purchaseOutcome;
             if (outcome == PurchaseOutcome.Ask)
             {
@@ -419,9 +424,17 @@ namespace susaplay.SDK.Editor.Simulator
                     }
                     pending.ItemId = candidates[0];
                 }
-                return config.Items.TryGetValue(pending.ItemId, out var item) && item is Dictionary<string, object>
-                    ? null
-                    : "Item not found in economy config";
+                if (!(config.Items.TryGetValue(pending.ItemId, out var value) && value is Dictionary<string, object> item))
+                {
+                    return "Item not found in economy config";
+                }
+                // Refused before checkout, as create-payment-token does since plan S8.
+                var inventory = _state().FindInventory(pending.GameId, false);
+                if (LocalBackend.IsDurable(item) && inventory != null && inventory.Count(inventory.items, pending.ItemId) > 0)
+                {
+                    return "Durable item is already owned";
+                }
+                return null;
             }
 
             if (string.IsNullOrEmpty(pending.TopupPackId))
@@ -504,10 +517,10 @@ namespace susaplay.SDK.Editor.Simulator
             _backend.GrantItem(pending.GameId, pending.ItemId, item, "direct_purchase", "sim-" + pending.RequestId, out var error);
             if (error != null)
             {
-                // Production takes the payment first and only then finds the item owned (plan S8).
+                // Checkout refuses an owned durable before payment, so this means the item was
+                // granted while the developer left this purchase waiting under Ask.
                 Debug.LogWarning("[SusaPlay Simulator] Purchase of \"" + pending.ItemId + "\" was paid, but the grant was refused: " +
-                                 error.ErrorCode + " — " + error.ErrorMessage + ". In production the player is charged and does not " +
-                                 "receive the item. Check ownership before offering a durable item.");
+                                 error.ErrorCode + " — " + error.ErrorMessage + ".");
             }
         }
 
@@ -519,6 +532,9 @@ namespace susaplay.SDK.Editor.Simulator
                 "requestId", pending.RequestId,
                 "success", success,
                 "status", status,
+                // Once checkout opened, the scope create-payment-token chose: a player always
+                // transacts live. Before that the shells have none to send.
+                "walletScope", pending.CheckoutOpened ? "live" : null,
                 "wallet", topup ? null : _backend.GameWalletSnapshot(pending.GameId),
                 "platformWallet", topup ? _backend.PlatformWalletSnapshot() : null,
                 "error", errorCode == null ? null : SimJson.Obj("code", errorCode, "message", errorMessage)));

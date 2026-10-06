@@ -3,8 +3,14 @@ namespace susaplay.SDK
 {
     public class SDKConfig : ScriptableObject
     {
-        private const string LiveUrl = "https://europe-west1-susaplay-2e8e3.cloudfunctions.net";
-        private const string EmulatorUrl = "http://localhost:5001";
+        // The platform's API site. Builds before 1.9.1 called the Cloud Functions host
+        // directly, which compiled a Google Cloud project id into every game; that host keeps
+        // working for them.
+        private const string LiveUrl = "https://api.susaplay.com";
+        // The Functions emulator serves /{project}/{region}/{function}/..., so the SDK's
+        // "/save/write" lands on the `save` function. It used to be the bare host, where no
+        // function answers.
+        private const string EmulatorUrl = "http://127.0.0.1:5001/susaplay-2e8e3/europe-west1";
         private const float MinimumAnalyticsFlushIntervalSeconds = 10f;
         [SerializeField] private string _gameKey;
         [SerializeField] private bool _isEmulatorMode;

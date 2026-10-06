@@ -233,12 +233,13 @@ namespace susaplay.SDK.Editor.Tests
         }
 
         [Test]
-        public void AnAnalyticsLevelUpWithoutALevelIsAcceptedWithAWarning()
+        public void AnAnalyticsLevelUpWithoutALevelIsDroppedWithAWarning()
         {
             var response = _sim.Post("/analytics/event",
-                "{\"gameId\":\"game_1\",\"sessionId\":\"s\",\"events\":[{\"name\":\"level_up\",\"params\":\"{}\"}]}");
+                "{\"gameId\":\"game_1\",\"sessionId\":\"s\",\"events\":[{\"name\":\"level_up\",\"params\":\"{}\"},{\"name\":\"level_up\",\"params\":{\"level\":2}}]}");
 
             Assert.AreEqual(200, response.Status);
+            Assert.AreEqual(1L, SimulatorFixture.Data(response)["accepted"]);
             Assert.AreEqual(1, response.Warnings.Count);
         }
 

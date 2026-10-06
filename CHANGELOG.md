@@ -2,6 +2,34 @@
 
 All notable changes to `com.susaplay.sdk` should be documented in this file.
 
+## [1.9.1] - 2026-10-06
+
+Changed:
+
+- The SDK calls `https://api.susaplay.com` instead of the platform's Cloud Functions host
+  (`europe-west1-susaplay-2e8e3.cloudfunctions.net`), which compiled a Google Cloud project id
+  into every game build. Builds made with older SDKs keep working on the old host.
+
+  This needs the platform's API site to route the SDK's routes, which ships with this release.
+  `PlatformConfig`'s live URL override still takes precedence when set.
+
+Fixed:
+
+- Emulator mode called `http://localhost:5001/save/write`, where no function answers: the
+  Functions emulator serves `/{project}/{region}/{function}/...`. It now calls
+  `http://127.0.0.1:5001/susaplay-2e8e3/europe-west1`.
+
+Editor Simulator — now matches the platform's fixes:
+
+- A purchase of a durable item the player already owns is refused before checkout, with
+  `token-failed` and "Durable item is already owned", as the platform now does — previously the
+  player was charged and the grant failed.
+- An analytics `level_up` without a valid `level` is dropped, as the platform now does, with a
+  Console warning; the rest of the batch is still accepted.
+- `SDK_PURCHASE_RESPONSE` carries `walletScope`, so `PurchaseResult.WalletScope` is `live` once
+  checkout has opened. The SusaPlay pages now send it too; it was always empty before.
+- `SDK_AUTH_COMPLETE` also carries the token, as the pages send it.
+
 ## [1.9.0] - 2026-10-06
 
 Added:
