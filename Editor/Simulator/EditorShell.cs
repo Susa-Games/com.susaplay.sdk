@@ -32,6 +32,37 @@ namespace susaplay.SDK.Editor.Simulator
         }
     }
 
+    internal enum InjectedFailure
+    {
+        Unauthenticated,
+        Internal,
+        Network,
+    }
+
+    /// <summary>
+    /// "Next request fails": applies once, to the next request matching <see cref="Route"/>.
+    /// Without a server nothing ever fails, and a game's error handling still has to be tested.
+    /// </summary>
+    internal sealed class FailureInjection
+    {
+        /// <summary>"POST /save/write", or null for any route.</summary>
+        public string Route;
+        public InjectedFailure Failure;
+
+        public bool Matches(string route)
+        {
+            return Route == null || Route == route;
+        }
+
+        public string Describe()
+        {
+            var what = Failure == InjectedFailure.Unauthenticated ? "401 UNAUTHENTICATED"
+                : Failure == InjectedFailure.Internal ? "500 INTERNAL"
+                : "a network error";
+            return "The next " + (Route ?? "request") + " fails with " + what;
+        }
+    }
+
     /// <summary>
     /// The browser shell's half of the bridge, played in the Editor: what the player portal's play
     /// page answers to each message the SDK sends (Appendix A of the plan). Where the two browser
@@ -80,6 +111,12 @@ namespace susaplay.SDK.Editor.Simulator
         public string SessionId { get; private set; }
         public string SdkGameKey { get; private set; }
         public IReadOnlyList<PendingRequest> Pending => _pending;
+
+        /// <summary>The Editor time the shell last pumped at, for the pending countdowns.</summary>
+        public double Now => _now;
+
+        /// <summary>Set by the window; cleared when it fires or the developer cancels it.</summary>
+        public FailureInjection NextFailure { get; set; }
 
         // ── Inbound: the SDK's side ─────────────────────────────────────────────────────────
 
@@ -146,6 +183,15 @@ namespace susaplay.SDK.Editor.Simulator
             Schedule(HttpLatencySeconds, () =>
             {
                 var name = request.Method + " " + PathOf(request.Endpoint);
+                if (NextFailure != null && NextFailure.Matches(name))
+                {
+                    var injected = NextFailure;
+                    NextFailure = null;
+                    completion.TrySetResult(Inject(injected, name, started, request.Body));
+                    Changed?.Invoke();
+                    return;
+                }
+
                 BackendResponse response;
                 try
                 {
@@ -186,6 +232,52 @@ namespace susaplay.SDK.Editor.Simulator
                 completion.TrySetResult(new EditorHttpAnswer { StatusCode = response.Status, Body = response.BodyText });
             });
             return completion.Task;
+        }
+
+        private EditorHttpAnswer Inject(FailureInjection injection, string name, DateTime started, string body)
+        {
+            var entry = new RequestLogEntry
+            {
+                Time = started,
+                Name = name + " (injected)",
+                DurationMs = (DateTime.UtcNow - started).TotalMilliseconds,
+                IsError = true,
+                Detail = body,
+            };
+            EditorHttpAnswer answer;
+            switch (injection.Failure)
+            {
+                case InjectedFailure.Unauthenticated:
+                    entry.Status = 401;
+                    entry.ErrorCode = "UNAUTHENTICATED";
+                    entry.ErrorMessage = "Token expired";
+                    answer = ErrorAnswer(401, entry.ErrorCode, entry.ErrorMessage);
+                    break;
+                case InjectedFailure.Internal:
+                    entry.Status = 500;
+                    entry.ErrorCode = "INTERNAL";
+                    entry.ErrorMessage = "Internal server error";
+                    answer = ErrorAnswer(500, entry.ErrorCode, entry.ErrorMessage);
+                    break;
+                default:
+                    // What UnityWebRequest reports when the request never gets a response.
+                    entry.ErrorMessage = "Cannot connect to destination host";
+                    answer = new EditorHttpAnswer { NetworkError = entry.ErrorMessage };
+                    break;
+            }
+            _log.Add(entry);
+            Debug.LogWarning("[SusaPlay Simulator] " + name + " failed on purpose (injected): " +
+                             (entry.ErrorCode ?? "network error") + " — " + entry.ErrorMessage);
+            return answer;
+        }
+
+        private static EditorHttpAnswer ErrorAnswer(long status, string code, string message)
+        {
+            return new EditorHttpAnswer
+            {
+                StatusCode = status,
+                Body = SimJson.SerializePython(SimJson.Obj("success", false, "error", SimJson.Obj("code", code, "message", message))),
+            };
         }
 
         // ── Session ─────────────────────────────────────────────────────────────────────────

@@ -321,5 +321,103 @@ namespace susaplay.SDK.Editor.Tests
 
             Assert.AreEqual("dismissed", SimulatorFixture.Payload(_sim.LastDelivered("SDK_AD_FAILED"))["reason"]);
         }
+
+        // ── Failure injection ───────────────────────────────────────────────────────────────
+
+        private System.Threading.Tasks.Task<EditorHttpAnswer> Request(string method, string endpoint, string body = null)
+        {
+            return _sim.Shell.OnHttp(new EditorHttpRequest { Method = method, Endpoint = endpoint, Body = body, Authorization = _sim.Token });
+        }
+
+        [Test]
+        public void AnInjectedFailureHitsOnlyTheChosenRouteAndOnlyOnce()
+        {
+            Init();
+            _sim.Shell.NextFailure = new FailureInjection { Route = "POST /save/write", Failure = InjectedFailure.Internal };
+            LogAssert.Expect(UnityEngine.LogType.Warning, new System.Text.RegularExpressions.Regex("injected"));
+
+            var read = Request("GET", "/save/read?gameId=game_1&slot=a");
+            var write = Request("POST", "/save/write", "{\"gameId\":\"game_1\",\"slot\":\"a\",\"data\":{},\"version\":0}");
+            var again = Request("POST", "/save/write", "{\"gameId\":\"game_1\",\"slot\":\"a\",\"data\":{},\"version\":0}");
+            _sim.Advance(EditorShell.HttpLatencySeconds);
+
+            Assert.AreEqual(200, read.Result.StatusCode);
+            Assert.AreEqual(500, write.Result.StatusCode);
+            StringAssert.Contains("INTERNAL", write.Result.Body);
+            Assert.AreEqual(200, again.Result.StatusCode);
+            Assert.IsNull(_sim.Shell.NextFailure);
+            Assert.AreEqual(1, _sim.State.FindSave("game_1", "a").version, "the injected failure wrote nothing");
+        }
+
+        [Test]
+        public void AnInjectedNetworkErrorHasNoResponse()
+        {
+            Init();
+            _sim.Shell.NextFailure = new FailureInjection { Failure = InjectedFailure.Network };
+            LogAssert.Expect(UnityEngine.LogType.Warning, new System.Text.RegularExpressions.Regex("injected"));
+
+            var answer = Request("GET", "/economy/inventory");
+            _sim.Advance(EditorShell.HttpLatencySeconds);
+
+            Assert.AreEqual("Cannot connect to destination host", answer.Result.NetworkError);
+            StringAssert.Contains("(injected)", _sim.Log.Entries[_sim.Log.Entries.Count - 1].Name);
+        }
+
+        [Test]
+        public void AnInjected401ReadsAsAnExpiredToken()
+        {
+            Init();
+            _sim.Shell.NextFailure = new FailureInjection { Failure = InjectedFailure.Unauthenticated };
+            LogAssert.Expect(UnityEngine.LogType.Warning, new System.Text.RegularExpressions.Regex("injected"));
+
+            var answer = Request("GET", "/economy/inventory");
+            _sim.Advance(EditorShell.HttpLatencySeconds);
+
+            Assert.AreEqual(401, answer.Result.StatusCode);
+            StringAssert.Contains("UNAUTHENTICATED", answer.Result.Body);
+        }
+
+        [Test]
+        public void SigningInFromTheWindowSwitchesTheSession()
+        {
+            _sim.Settings.guest = true;
+            Init();
+
+            _sim.Shell.SignIn();
+            _sim.Advance();
+            _sim.Send("SDK_GET_TOKEN", "{\"requestId\":\"t1\"}");
+            _sim.Advance();
+
+            Assert.AreEqual(_sim.State.uid, SimulatorFixture.Payload(_sim.LastDelivered("SDK_AUTH_COMPLETE"))["uid"]);
+            Assert.IsNotNull(SimulatorFixture.Payload(_sim.LastDelivered("SDK_TOKEN_RESPONSE"))["token"]);
+        }
+
+        [Test]
+        public void AnAdSetToAskWaitsAndCanBeSkipped()
+        {
+            _sim.Settings.adOutcome = AdOutcome.Ask;
+            Init();
+            _sim.Send("SDK_AD_SHOW", "{\"requestId\":\"ad1\",\"adType\":\"rewarded\"}");
+            _sim.Advance();
+            Assert.AreEqual("ad", _sim.Shell.Pending[0].Kind);
+
+            _sim.Shell.AnswerAd(_sim.Shell.Pending[0], AdOutcome.NoAd);
+            _sim.Advance();
+
+            Assert.AreEqual("notReady", SimulatorFixture.Payload(_sim.LastDelivered("SDK_AD_FAILED"))["reason"]);
+        }
+
+        [Test]
+        public void APendingRequestIsDroppedOnceTheSdkHasGivenUp()
+        {
+            _sim.Settings.purchaseOutcome = PurchaseOutcome.Ask;
+            Init();
+            _sim.Send("SDK_PURCHASE", "{\"requestId\":\"p1\",\"intent\":\"direct_item\",\"itemId\":\"sword\"}");
+            _sim.Advance();
+
+            _sim.Advance(PendingRequest.SdkTimeoutSeconds + 1);
+
+            Assert.AreEqual(0, _sim.Shell.Pending.Count);
+        }
     }
 }

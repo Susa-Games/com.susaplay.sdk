@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using UnityEditor;
 
 namespace susaplay.SDK.Editor.Simulator
@@ -66,6 +67,50 @@ namespace susaplay.SDK.Editor.Simulator
         {
             Config = SimulatorConfig.LoadFile();
             Changed?.Invoke();
+        }
+
+        /// <summary>
+        /// Copies a configuration downloaded from the Developer Portal into ProjectSettings/, after
+        /// checking it can be read. Returns the reason it was refused, or null.
+        /// </summary>
+        public static string ImportConfig(string sourcePath)
+        {
+            try
+            {
+                SimulatorConfig.FromJson(File.ReadAllText(sourcePath));
+            }
+            catch (Exception exception)
+            {
+                return exception.Message;
+            }
+            Directory.CreateDirectory(Path.GetDirectoryName(SimulatorConfig.DefaultPath));
+            File.Copy(sourcePath, SimulatorConfig.DefaultPath, true);
+            ReloadConfig();
+            return null;
+        }
+
+        public static void RemoveConfig()
+        {
+            if (File.Exists(SimulatorConfig.DefaultPath))
+            {
+                File.Delete(SimulatorConfig.DefaultPath);
+            }
+            ReloadConfig();
+        }
+
+        /// <summary>Sets the platform wallet, to prepare a test without simulating top-ups.</summary>
+        public static void SetPlatformWallet(double coins, double gems)
+        {
+            var wallet = State.platformWallet;
+            if (wallet.coins == coins && wallet.gems == gems)
+            {
+                return;
+            }
+            wallet.coins = Math.Max(0, coins);
+            wallet.gems = Math.Max(0, gems);
+            wallet.version += 1;
+            wallet.lastModified = LocalBackend.Iso(DateTime.UtcNow);
+            SaveState();
         }
 
         public static void SaveSettings()

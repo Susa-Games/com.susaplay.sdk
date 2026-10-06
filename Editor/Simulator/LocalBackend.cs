@@ -38,6 +38,24 @@ namespace susaplay.SDK.Editor.Simulator
     internal sealed class LocalBackend
     {
         public const string TokenPrefix = "sim1.";
+
+        /// <summary>The routes this backend answers, as the request log names them.</summary>
+        public static readonly string[] Routes =
+        {
+            "GET /save/read",
+            "POST /save/write",
+            "POST /engagement/achievements/unlock",
+            "POST /engagement/achievements/increment",
+            "GET /engagement/achievements/list",
+            "POST /analytics/event",
+            "POST /webhooks/event",
+            "GET /economy/store-items",
+            "GET /economy/topup-packs",
+            "GET /economy/platform-wallet",
+            "POST /economy/platform-wallet/spend",
+            "GET /economy/inventory",
+            "POST /economy/consume",
+        };
         private const int MaxSaveCharacters = 500_000;
 
         private readonly Func<SimulatorState> _state;
