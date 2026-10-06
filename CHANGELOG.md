@@ -2,6 +2,17 @@
 
 All notable changes to `com.susaplay.sdk` should be documented in this file.
 
+## [1.8.1] - 2026-10-06
+
+Fixed:
+
+- The second Play in the Unity Editor reused the first one's SDK state when domain reload is
+  turned off (Enter Play Mode Options). The SDK keeps its state in static fields, which a WebGL
+  page load always starts fresh but the Editor keeps between Plays: `Initialize()` handed back the
+  previous session's task, the modules from that session stayed in place, and every handler it had
+  subscribed to `WebGLBridge.OnMessageReceived` still ran on the next session's messages. The SDK
+  now resets all of it when each run starts, before any scene loads. Builds are unaffected.
+
 ## [1.8.0] - 2026-09-29
 
 Added:

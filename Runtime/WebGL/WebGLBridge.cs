@@ -14,6 +14,17 @@ namespace susaplay.SDK
         private static extern void InitializeMessageListener(Action<string> callback);
 #endif
         public static event Action<string> OnMessageReceived;
+
+        /// <summary>
+        /// Drops every subscriber. Static events outlive a Play session when the Editor's
+        /// domain reload is off, so without this a module from an earlier session would
+        /// still receive — and act on — the next session's messages.
+        /// </summary>
+        internal static void ResetForNewSession()
+        {
+            OnMessageReceived = null;
+        }
+
         public static void Initialize()
         {
 #if UNITY_WEBGL && !UNITY_EDITOR

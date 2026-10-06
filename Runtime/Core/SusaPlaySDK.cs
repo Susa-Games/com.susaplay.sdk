@@ -39,7 +39,7 @@ namespace susaplay.SDK
         /// <summary>Canonical platform game id for this build. Empty until initialization completes.</summary>
         public static string GameId { get; private set; } = "";
 
-        private const string SdkVersion = "1.8.0";
+        private const string SdkVersion = "1.8.1";
         private const int InitTimeoutMs = 15000;
         private static bool _isInitialized;
         private static bool _didSendGameLoaded;
@@ -110,6 +110,42 @@ namespace susaplay.SDK
                 return;
             }
             await _initTcs.Task;
+        }
+
+        /// <summary>
+        /// Returns the SDK to its never-initialized state at the start of every run.
+        ///
+        /// In a WebGL build each page load is a fresh process, so none of this state ever
+        /// survived. In the Editor with domain reload turned off (Enter Play Mode Options),
+        /// statics survive between Plays: the second Play was handed the first one's
+        /// `_initTask` and modules, and a single SDK_READY reached handlers from sessions
+        /// that no longer exist. SubsystemRegistration runs before any scene loads, so no
+        /// game code can call Initialize() ahead of it.
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        internal static void ResetStaticState()
+        {
+            _initTask = null;
+            _initTcs = null;
+            _isInitialized = false;
+            _didSendGameLoaded = false;
+            _config = null;
+            _tokenManager = null;
+            _appCheckManager = null;
+            _httpClient = null;
+            _auth = null;
+            _cloudSave = null;
+            _achievements = null;
+            _analytics = null;
+            _flusher = null;
+            _webhooks = null;
+            _purchases = null;
+            _ads = null;
+            _api = null;
+            _backend = null;
+            _liveOps = null;
+            GameId = "";
+            WebGLBridge.ResetForNewSession();
         }
 
         public static void MarkGameLoaded()
