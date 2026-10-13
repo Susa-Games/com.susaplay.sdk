@@ -295,8 +295,10 @@ namespace susaplay.SDK.Editor.Tests
         }
 
         [Test]
-        public void ARewardOverTheDailyMaximumCompletesWithoutAReward()
+        public void AnAdOverTheDailyMaximumIsStillRewardedButPaysNoCoins()
         {
+            // The game's reward follows the watched ad; only the platform's coins
+            // stop at the limit.
             _sim.Config = SimulatorConfig.FromJson(SimulatorFixture.ConfigJson.Replace("\"cooldownMinutes\": 30", "\"cooldownMinutes\": 1"));
             Init();
             for (var i = 0; i < 2; i++)
@@ -305,14 +307,26 @@ namespace susaplay.SDK.Editor.Tests
                 _sim.Advance();
                 _sim.Now = _sim.Now.AddMinutes(2);
             }
-            LogAssert.Expect(UnityEngine.LogType.Warning, new System.Text.RegularExpressions.Regex("AD_REWARD_LIMIT_REACHED"));
 
             _sim.Send("SDK_AD_SHOW", "{\"requestId\":\"ad9\",\"adType\":\"rewarded\"}");
             _sim.Advance();
 
             var complete = SimulatorFixture.Payload(_sim.LastDelivered("SDK_AD_COMPLETE"));
             Assert.AreEqual("ad9", complete["requestId"]);
-            Assert.AreEqual(false, complete["rewarded"]);
+            Assert.AreEqual(true, complete["rewarded"]);
+            Assert.IsNull(complete["data"]);
+        }
+
+        [Test]
+        public void AGuestIsRewardedForTheAdButEarnsNoCoins()
+        {
+            _sim.Settings.guest = true;
+            Init();
+            _sim.Send("SDK_AD_SHOW", "{\"requestId\":\"ad1\",\"adType\":\"rewarded\"}");
+            _sim.Advance();
+
+            var complete = SimulatorFixture.Payload(_sim.LastDelivered("SDK_AD_COMPLETE"));
+            Assert.AreEqual(true, complete["rewarded"]);
             Assert.IsNull(complete["data"]);
         }
 

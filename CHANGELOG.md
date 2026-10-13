@@ -2,6 +2,24 @@
 
 All notable changes to `com.susaplay.sdk` should be documented in this file.
 
+## [1.10.0] - 2026-10-13
+
+Changed:
+
+- `AdResult.Rewarded` now means the rewarded ad was watched to the end — grant your game's own
+  reward on it. It used to mean the platform had credited coins, so it was false at the
+  platform's daily limit or in its cooldown, and a game's "extra life" for a fully watched ad
+  depended on the platform's coin rules. The platform reports the watched ad either way.
+- Platform coins for rewarded ads are platform-wide settings now, the same for every game, and
+  only signed-in players earn them; a guest earns none, not even held for later. The Editor
+  Simulator follows: a guest's rewarded ad completes with `Rewarded = true` and no coins, and the
+  default reward is the platform's 1 coin.
+
+Added:
+
+- `AdResult.CoinsAwarded`: the platform coins credited for this ad, or 0. Informational — they
+  are already in the wallet.
+
 ## [1.9.1] - 2026-10-06
 
 Changed:

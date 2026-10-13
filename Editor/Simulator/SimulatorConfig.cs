@@ -13,8 +13,9 @@ namespace susaplay.SDK.Editor.Simulator
     {
         public const string DefaultPath = "ProjectSettings/Packages/com.susaplay.sdk/SimulatorConfig.json";
 
-        // The platform's defaults for a game with no ad settings (helpers.py).
-        public const long DefaultRewardAmount = 50;
+        // The platform coin settings defaults (economy_api/coin_settings.py), used when an
+        // exported configuration carries none.
+        public const long DefaultRewardAmount = 1;
         public const long DefaultMaxPerDay = 10;
         public const long DefaultCooldownMinutes = 30;
 

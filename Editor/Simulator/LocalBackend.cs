@@ -926,10 +926,13 @@ namespace susaplay.SDK.Editor.Simulator
         }
 
         /// <summary>
-        /// POST /economy/ad-reward as the play page calls it after a rewarded ad. Returns the
-        /// response's data, or null with the refusal in <paramref name="error"/>.
+        /// POST /economy/ad-reward as the play page calls it after a rewarded ad, for a
+        /// signed-in player — the page never asks for a guest, who earns no coins. Returns the
+        /// response's data, or null with the refusal in <paramref name="error"/>. The amount,
+        /// daily limit and cooldown are the platform's coin settings, exported under the keys
+        /// the game's ad settings once used.
         /// </summary>
-        internal Dictionary<string, object> ClaimAdReward(string gameId, bool guest, out BackendResponse error)
+        internal Dictionary<string, object> ClaimAdReward(string gameId, out BackendResponse error)
         {
             error = null;
             var config = Config;
@@ -939,12 +942,9 @@ namespace susaplay.SDK.Editor.Simulator
                 return null;
             }
             var amount = config.RewardAmount;
-            if (guest)
+            if (amount <= 0)
             {
-                // A guest's reward is held against a redemption token until they sign in.
-                return SimJson.Obj(
-                    "completionToken", Guid.NewGuid().ToString(),
-                    "awarded", SimJson.Obj("currency", "coins", "amount", amount));
+                return SimJson.Obj("awarded", SimJson.Obj("currency", "coins", "amount", 0L), "newBalance", null);
             }
 
             var now = _clock();
@@ -952,7 +952,7 @@ namespace susaplay.SDK.Editor.Simulator
             var claim = State.FindAdClaim(gameId, today, true);
             if (claim.count >= config.MaxPerDay)
             {
-                error = Error("AD_REWARD_LIMIT_REACHED", "Daily ad reward limit of " + config.MaxPerDay + " reached for this game", 429);
+                error = Error("AD_REWARD_LIMIT_REACHED", "Daily ad reward limit of " + config.MaxPerDay + " reached", 429);
                 return null;
             }
             if (!string.IsNullOrEmpty(claim.lastClaimAt) &&

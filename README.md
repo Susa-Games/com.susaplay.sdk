@@ -2,7 +2,7 @@
 
 Unity SDK package for integrating games with the SusaPlay platform.
 
-Latest stable release tag: `v1.9.1`
+Latest stable release tag: `v1.10.0`
 
 This package is intended for games that run inside the SusaPlay shell on WebGL today. The current implementation is real and usable, but still evolving. We are intentionally exposing all implemented methods so game teams can integrate early and help us tune the SDK against real game behavior.
 
@@ -189,33 +189,34 @@ Current behavior notes:
 ```csharp
 var result = await SusaPlaySDK.Ads.ShowRewarded();
 
-// Success and Rewarded are different answers. Grant on Rewarded.
 if (result.Rewarded)
 {
-    // The platform has already credited the reward to the player's wallet.
-    Debug.Log("Reward credited");
-}
-else if (result.Success)
-{
-    // The ad played in full, but the reward was refused — normally the daily
-    // cap or the cooldown, both checked on the server after the ad ends.
-    Debug.Log("Watched, but no reward this time");
+    // Watched to the end: grant your game's own reward (an extra life, a doubled score).
+    GrantExtraLife();
 }
 else
 {
-    Debug.LogWarning("Ad failed: " + result.Reason);
+    // Skipped, no ad available, or ads are off for this game.
+    Debug.Log("No reward: " + result.Reason);
 }
+
+// Platform coins the player got for this ad, already in their wallet. 0 for a guest,
+// at the platform's daily limit or in its cooldown. Informational only.
+Debug.Log("Platform coins: " + result.CoinsAwarded);
 ```
 
-Interstitials use `ShowInterstitial()`. They credit nothing, so `Rewarded` is always false and
+Interstitials use `ShowInterstitial()`. They reward nothing, so `Rewarded` is always false and
 `Success` is the only answer that matters.
 
 Current behavior notes:
 
 - the SDK loads no ads itself — it asks the page, which picks a network from the game's ad
   settings and falls back to a house ad or a placeholder
-- reward amount, daily cap and cooldown are the game's ad settings, set in the developer portal,
-  and are enforced on the server after the ad has played
+- `Rewarded` means the rewarded ad was watched to the end (since 1.10.0). Until then it meant
+  the platform had credited coins, and was false at the platform's daily limit or cooldown
+- platform coins for ads are the platform's reward, not your game's: the amount, the daily
+  limit and the cooldown are set by SusaPlay for every game alike, and only signed-in players
+  earn them. Never add coins for an ad yourself
 - every ad type is gated behind the game's `rewarded.enabled` setting, so an interstitial is
   refused with `ADS_DISABLED` while rewarded ads are off
 - `Reason` is `ADS_DISABLED` when the game has ads off, `TIMEOUT` when the SDK gives up waiting,
@@ -299,7 +300,7 @@ Use Unity Package Manager with a Git URL pinned to a release tag:
 ```json
 {
   "dependencies": {
-    "com.susaplay.sdk": "https://github.com/Susa-Games/com.susaplay.sdk.git#v1.9.1"
+    "com.susaplay.sdk": "https://github.com/Susa-Games/com.susaplay.sdk.git#v1.10.0"
   }
 }
 ```
@@ -307,11 +308,11 @@ Use Unity Package Manager with a Git URL pinned to a release tag:
 You can also use:
 
 - Unity -> Window -> Package Manager -> Add package from git URL
-- `https://github.com/Susa-Games/com.susaplay.sdk.git#v1.9.1`
+- `https://github.com/Susa-Games/com.susaplay.sdk.git#v1.10.0`
 
 Versioning notes:
 
-- Use a tag such as `#v1.9.1` when you want a reproducible release install
+- Use a tag such as `#v1.10.0` when you want a reproducible release install
 - Use `#main` only if you intentionally want the moving head of development
 - Use `#latest` for the newest published SDK branch maintained by SusaPlay
 - Use `#release` for the current stable SDK branch maintained by SusaPlay
@@ -520,6 +521,7 @@ We recommend pinned Git tags:
 - `v1.2.3`
 - `v1.9.0`
 - `v1.9.1`
+- `v1.10.0`
 
 Guidelines:
 

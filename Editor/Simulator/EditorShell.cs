@@ -597,12 +597,19 @@ namespace susaplay.SDK.Editor.Simulator
                 return;
             }
 
-            var data = _backend.ClaimAdReward(SessionGameId, IsGuest, out var refusal);
+            // As on the play page: the game's reward follows the watched ad, and the
+            // platform's coins travel alongside. A guest earns no coins, so the page
+            // does not ask for them.
+            Dictionary<string, object> data = null;
+            BackendResponse refusal = null;
+            if (!IsGuest)
+            {
+                data = _backend.ClaimAdReward(SessionGameId, out refusal);
+            }
             if (refusal != null)
             {
-                // The ad played in full; the platform refused the reward afterwards.
-                Debug.LogWarning("[SusaPlay Simulator] Rewarded ad completed but no reward was credited: " + refusal.ErrorCode + " — " +
-                                 refusal.ErrorMessage + ". The game receives Rewarded = false and must not grant anything.");
+                Debug.Log("[SusaPlay Simulator] Rewarded ad watched; no platform coins this time: " + refusal.ErrorCode + " — " +
+                          refusal.ErrorMessage + ". The game still receives Rewarded = true.");
                 _log.Add(new RequestLogEntry
                 {
                     Time = DateTime.UtcNow,
@@ -616,7 +623,7 @@ namespace susaplay.SDK.Editor.Simulator
             Send("SDK_AD_COMPLETE", SimJson.Obj(
                 "requestId", pending.RequestId,
                 "adType", pending.AdType,
-                "rewarded", data != null,
+                "rewarded", true,
                 "data", data));
         }
 

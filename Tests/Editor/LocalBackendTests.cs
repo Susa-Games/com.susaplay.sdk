@@ -389,22 +389,22 @@ namespace susaplay.SDK.Editor.Tests
         [Test]
         public void AdRewardsKeepTheCooldownAndTheDailyMaximum()
         {
-            Assert.IsNotNull(_sim.Backend.ClaimAdReward("game_1", false, out _));
+            Assert.IsNotNull(_sim.Backend.ClaimAdReward("game_1", out _));
 
             _sim.Now = _sim.Now.AddMinutes(10);
-            Assert.IsNull(_sim.Backend.ClaimAdReward("game_1", false, out var cooldown));
+            Assert.IsNull(_sim.Backend.ClaimAdReward("game_1", out var cooldown));
             Assert.AreEqual("AD_REWARD_COOLDOWN", cooldown.ErrorCode);
 
             _sim.Now = _sim.Now.AddMinutes(30);
-            Assert.IsNotNull(_sim.Backend.ClaimAdReward("game_1", false, out _));
+            Assert.IsNotNull(_sim.Backend.ClaimAdReward("game_1", out _));
 
             _sim.Now = _sim.Now.AddMinutes(31);
-            Assert.IsNull(_sim.Backend.ClaimAdReward("game_1", false, out var limit));
+            Assert.IsNull(_sim.Backend.ClaimAdReward("game_1", out var limit));
             Assert.AreEqual("AD_REWARD_LIMIT_REACHED", limit.ErrorCode);
 
             // The day is the UTC date.
             _sim.Now = _sim.Now.Date.AddDays(1);
-            Assert.IsNotNull(_sim.Backend.ClaimAdReward("game_1", false, out _));
+            Assert.IsNotNull(_sim.Backend.ClaimAdReward("game_1", out _));
             Assert.AreEqual(75, _sim.State.platformWallet.coins);
         }
     }

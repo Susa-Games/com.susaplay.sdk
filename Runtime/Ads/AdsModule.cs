@@ -35,13 +35,15 @@ namespace susaplay.SDK
         }
 
         /// <summary>
-        /// Shows a rewarded ad and, if it is watched, credits the reward the game's
-        /// ad settings define.
+        /// Shows a rewarded ad. When <see cref="AdResult.Rewarded"/> is true the
+        /// player watched it to the end: grant your game's reward (an extra life, a
+        /// doubled score).
         ///
-        /// Check <see cref="AdResult.Rewarded"/>, not <see cref="AdResult.Success"/>,
-        /// before granting anything in game: the two are different answers. An ad
-        /// can play in full and still credit nothing, because the reward's daily
-        /// cap and cooldown are enforced on the server after the ad finishes.
+        /// Separately, the platform may credit a signed-in player some platform
+        /// coins for the ad, reported in <see cref="AdResult.CoinsAwarded"/>. That is
+        /// the platform's reward, not your game's: it is limited per day and by a
+        /// cooldown, and a guest gets none, but none of that changes
+        /// <see cref="AdResult.Rewarded"/>.
         /// </summary>
         public Task<AdResult> ShowRewarded()
         {
@@ -136,6 +138,9 @@ namespace susaplay.SDK
             {
                 Success = completed,
                 Rewarded = completed && payload.rewarded,
+                CoinsAwarded = completed && payload.data != null && payload.data.awarded != null
+                    ? payload.data.awarded.amount
+                    : 0,
                 RequestId = payload.requestId,
                 AdType = payload.adType,
                 Reason = completed ? null : payload.reason,
@@ -150,11 +155,22 @@ namespace susaplay.SDK
         public bool Success;
 
         /// <summary>
-        /// The reward was credited to the player's wallet. False for an
-        /// interstitial, and false for a rewarded ad that played but was refused
-        /// the reward — the daily cap and the cooldown are checked after it ends.
+        /// A rewarded ad was watched to the end: grant your game's reward. Always
+        /// false for an interstitial, and for an ad that was skipped or failed.
+        ///
+        /// Until SDK 1.10.0 this meant the platform had credited coins, and was
+        /// false at the platform's daily limit or in its cooldown. The platform now
+        /// reports the watched ad either way; its coins are in
+        /// <see cref="CoinsAwarded"/>.
         /// </summary>
         public bool Rewarded;
+
+        /// <summary>
+        /// Platform coins credited to the player for this ad, or 0 — a guest, the
+        /// platform's daily limit or cooldown, or an interstitial. Informational:
+        /// the platform has already put them in the wallet; never add them yourself.
+        /// </summary>
+        public int CoinsAwarded;
 
         /// <summary>Correlation id the page echoes back. Useful for analytics.</summary>
         public string RequestId;
@@ -183,5 +199,19 @@ namespace susaplay.SDK
         public string adType;
         public bool rewarded;
         public string reason;
+        public AdRewardData data;
+    }
+
+    [Serializable]
+    class AdRewardData
+    {
+        public AdAwarded awarded;
+    }
+
+    [Serializable]
+    class AdAwarded
+    {
+        public string currency;
+        public int amount;
     }
 }
