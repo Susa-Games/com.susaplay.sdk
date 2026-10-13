@@ -37,15 +37,21 @@
     "games/game-1/economy_config/game-1": {
       "currencies": {},
       "items": {
-        "banner": { "name": "Banner", "type": "durable", "price": { "currency": "coins", "amount": 5 }, "walletPurchaseEnabled": false },
-        "freebie": { "name": "Freebie", "type": "durable", "price": { "currency": "coins", "amount": 0 } },
-        "potion": { "name": "Potion", "type": "consumable", "price": { "currency": "coins", "amount": 10 } },
-        "skin": { "name": "Skin", "type": "durable", "price": { "currency": "gold", "amount": 5 } },
-        "sword": { "name": "Sword", "type": "durable", "price": { "currency": "coins", "amount": 30 } }
+        "banner": { "name": "Banner", "type": "durable", "priceTier": "tier_99", "walletPurchaseEnabled": false },
+        "freebie": { "name": "Freebie", "type": "durable", "walletPurchaseEnabled": true },
+        "potion": { "name": "Potion", "type": "consumable", "priceTier": "tier_99", "walletPurchaseEnabled": true },
+        "skin": { "name": "Skin", "type": "durable", "priceTier": "tier_199" },
+        "sword": { "name": "Sword", "type": "durable", "priceTier": "tier_299", "walletPurchaseEnabled": true }
       }
     },
     "platform_config/commerce": {
       "paymentMode": "live",
+      "coinsPerCent": 1,
+      "priceTiers": {
+        "tier_99": { "amountMinor": 99, "currency": "USD", "providerSkus": { "xsolla": "sku_99" }, "active": true },
+        "tier_199": { "amountMinor": 199, "currency": "USD", "providerSkus": { "xsolla": "sku_199" }, "active": false },
+        "tier_299": { "amountMinor": 299, "currency": "USD", "providerSkus": { "xsolla": "sku_299" }, "active": true }
+      },
       "topupPacks": {
         "coins_100": {
           "name": "100 coins",
@@ -70,11 +76,11 @@
       { "achievementId": "no_target", "name": "No target", "description": null, "iconUrl": null, "type": "incremental", "targetValue": null, "points": 5 }
     ],
     "items": {
-      "banner": { "name": "Banner", "type": "durable", "price": { "currency": "coins", "amount": 5 }, "walletPurchaseEnabled": false },
-      "freebie": { "name": "Freebie", "type": "durable", "price": { "currency": "coins", "amount": 0 } },
-      "potion": { "name": "Potion", "type": "consumable", "price": { "currency": "coins", "amount": 10 } },
-      "skin": { "name": "Skin", "type": "durable", "price": { "currency": "gold", "amount": 5 } },
-      "sword": { "name": "Sword", "type": "durable", "price": { "currency": "coins", "amount": 30 } }
+      "banner": { "name": "Banner", "type": "durable", "priceTier": "tier_99", "walletPurchaseEnabled": false, "coinPrice": null },
+      "freebie": { "name": "Freebie", "type": "durable", "walletPurchaseEnabled": true, "coinPrice": null },
+      "potion": { "name": "Potion", "type": "consumable", "priceTier": "tier_99", "walletPurchaseEnabled": true, "coinPrice": 99 },
+      "skin": { "name": "Skin", "type": "durable", "priceTier": "tier_199", "coinPrice": null },
+      "sword": { "name": "Sword", "type": "durable", "priceTier": "tier_299", "walletPurchaseEnabled": true, "coinPrice": 299 }
     },
     "adSettings": {
       "provider": "google-adsense",
@@ -87,11 +93,11 @@
         "currencies": {},
         "currencyList": [],
         "items": [
-          { "itemId": "banner", "name": "Banner", "description": "", "iconUrl": null, "type": "durable", "price": { "currency": "coins", "amount": 5 }, "walletPurchaseEnabled": false, "walletPurchaseEligible": false, "directPurchaseEnabled": true },
-          { "itemId": "freebie", "name": "Freebie", "description": "", "iconUrl": null, "type": "durable", "price": { "currency": "coins", "amount": 0 }, "walletPurchaseEnabled": true, "walletPurchaseEligible": true, "directPurchaseEnabled": true },
-          { "itemId": "potion", "name": "Potion", "description": "", "iconUrl": null, "type": "consumable", "price": { "currency": "coins", "amount": 10 }, "walletPurchaseEnabled": true, "walletPurchaseEligible": true, "directPurchaseEnabled": true },
-          { "itemId": "skin", "name": "Skin", "description": "", "iconUrl": null, "type": "durable", "price": { "currency": "gold", "amount": 5 }, "walletPurchaseEnabled": true, "walletPurchaseEligible": false, "directPurchaseEnabled": true },
-          { "itemId": "sword", "name": "Sword", "description": "", "iconUrl": null, "type": "durable", "price": { "currency": "coins", "amount": 30 }, "walletPurchaseEnabled": true, "walletPurchaseEligible": true, "directPurchaseEnabled": true }
+          { "itemId": "banner", "name": "Banner", "description": "", "iconUrl": null, "type": "durable", "priceTier": "tier_99", "cashPrice": { "amountMinor": 99, "currency": "USD", "amount": 0.99 }, "coinPrice": null, "price": { "currency": "coins", "amount": 0 }, "walletPurchaseEnabled": false, "walletPurchaseEligible": false, "directPurchaseEnabled": true },
+          { "itemId": "freebie", "name": "Freebie", "description": "", "iconUrl": null, "type": "durable", "priceTier": null, "cashPrice": null, "coinPrice": null, "price": { "currency": "coins", "amount": 0 }, "walletPurchaseEnabled": true, "walletPurchaseEligible": false, "directPurchaseEnabled": false },
+          { "itemId": "potion", "name": "Potion", "description": "", "iconUrl": null, "type": "consumable", "priceTier": "tier_99", "cashPrice": { "amountMinor": 99, "currency": "USD", "amount": 0.99 }, "coinPrice": 99, "price": { "currency": "coins", "amount": 99 }, "walletPurchaseEnabled": true, "walletPurchaseEligible": true, "directPurchaseEnabled": true },
+          { "itemId": "skin", "name": "Skin", "description": "", "iconUrl": null, "type": "durable", "priceTier": "tier_199", "cashPrice": { "amountMinor": 199, "currency": "USD", "amount": 1.99 }, "coinPrice": null, "price": { "currency": "coins", "amount": 0 }, "walletPurchaseEnabled": false, "walletPurchaseEligible": false, "directPurchaseEnabled": false },
+          { "itemId": "sword", "name": "Sword", "description": "", "iconUrl": null, "type": "durable", "priceTier": "tier_299", "cashPrice": { "amountMinor": 299, "currency": "USD", "amount": 2.99 }, "coinPrice": 299, "price": { "currency": "coins", "amount": 299 }, "walletPurchaseEnabled": true, "walletPurchaseEligible": true, "directPurchaseEnabled": true }
         ]
       },
       "topupPacks": {
@@ -339,11 +345,11 @@
       "steps": [
         { "method": "GET", "path": "/economy/store-items?gameId=game-1",
           "expect": { "status": 200, "data": { "gameId": "game-1", "items": [
-            { "itemId": "banner", "walletPurchaseEligible": false },
-            { "itemId": "freebie" },
-            { "itemId": "potion", "type": "consumable" },
-            { "itemId": "skin", "walletPurchaseEligible": false },
-            { "itemId": "sword", "price": { "currency": "coins", "amount": 30 }, "walletPurchaseEligible": true }
+            { "itemId": "banner", "coinPrice": null, "walletPurchaseEligible": false, "directPurchaseEnabled": true },
+            { "itemId": "freebie", "priceTier": null, "cashPrice": null, "directPurchaseEnabled": false },
+            { "itemId": "potion", "type": "consumable", "coinPrice": 99 },
+            { "itemId": "skin", "walletPurchaseEnabled": false, "walletPurchaseEligible": false, "directPurchaseEnabled": false },
+            { "itemId": "sword", "cashPrice": { "amountMinor": 299, "currency": "USD" }, "coinPrice": 299, "price": { "currency": "coins", "amount": 299 }, "walletPurchaseEligible": true }
           ] } } },
         { "method": "GET", "path": "/economy/topup-packs",
           "expect": { "status": 200, "data": { "topupPacks": [ { "topupPackId": "coins_100", "amount": 100, "priceAmountMinor": 99 } ], "paymentMode": "live" } } }
@@ -368,45 +374,45 @@
     },
     {
       "name": "a durable is bought once",
-      "given": { "platformWallet": { "coins": 100 } },
+      "given": { "platformWallet": { "coins": 700 } },
       "steps": [
         { "method": "POST", "path": "/economy/platform-wallet/spend", "body": { "gameId": "game-1", "itemId": "sword", "requestId": "r1" },
-          "expect": { "status": 200, "data": { "newBalance": { "coins": 70 }, "walletId": "platform", "walletScope": "live",
-            "platformWallet": { "walletId": "platform", "walletScope": "live", "coins": 70, "gems": 0, "version": 2 },
+          "expect": { "status": 200, "data": { "newBalance": { "coins": 401 }, "walletId": "platform", "walletScope": "live",
+            "platformWallet": { "walletId": "platform", "walletScope": "live", "coins": 401, "gems": 0, "version": 2 },
             "inventory": { "sword": 1 }, "inventoryList": [ { "key": "sword", "value": 1 } ] } } },
         { "method": "POST", "path": "/economy/platform-wallet/spend", "body": { "gameId": "game-1", "itemId": "sword", "requestId": "r2" },
           "expect": { "status": 409, "error": { "code": "DUPLICATE_ITEM", "message": "Durable item is already owned" } } },
         { "method": "GET", "path": "/economy/platform-wallet",
-          "expect": { "status": 200, "data": { "coins": 70 } } },
+          "expect": { "status": 200, "data": { "coins": 401 } } },
         { "method": "GET", "path": "/economy/inventory?gameId=game-1",
           "expect": { "status": 200, "data": { "items": { "sword": 1 }, "itemsList": [ { "key": "sword", "value": 1 } ], "consumablesList": [] } } }
       ]
     },
     {
       "name": "a consumable adds one each time",
-      "given": { "platformWallet": { "coins": 100 } },
+      "given": { "platformWallet": { "coins": 200 } },
       "steps": [
         { "method": "POST", "path": "/economy/platform-wallet/spend", "body": { "gameId": "game-1", "itemId": "potion" },
-          "expect": { "status": 200, "data": { "newBalance": { "coins": 90 }, "consumables": { "potion": 1 }, "consumablesList": [ { "key": "potion", "value": 1 } ] } } },
+          "expect": { "status": 200, "data": { "newBalance": { "coins": 101 }, "consumables": { "potion": 1 }, "consumablesList": [ { "key": "potion", "value": 1 } ] } } },
         { "method": "POST", "path": "/economy/platform-wallet/spend", "body": { "gameId": "game-1", "itemId": "potion" },
-          "expect": { "status": 200, "data": { "newBalance": { "coins": 80 }, "consumablesList": [ { "key": "potion", "value": 2 } ] } } }
+          "expect": { "status": 200, "data": { "newBalance": { "coins": 2 }, "consumablesList": [ { "key": "potion", "value": 2 } ] } } }
       ]
     },
     {
       "name": "a repeated requestId replays the first spend",
-      "given": { "platformWallet": { "coins": 100 } },
+      "given": { "platformWallet": { "coins": 200 } },
       "steps": [
         { "method": "POST", "path": "/economy/platform-wallet/spend", "body": { "gameId": "game-1", "itemId": "potion", "requestId": "r1" },
-          "expect": { "status": 200, "data": { "newBalance": { "coins": 90 } } } },
+          "expect": { "status": 200, "data": { "newBalance": { "coins": 101 } } } },
         { "method": "POST", "path": "/economy/platform-wallet/spend", "body": { "gameId": "game-1", "itemId": "potion", "requestId": "r1" },
-          "expect": { "status": 200, "data": { "newBalance": { "coins": 90 }, "walletId": "platform", "walletScope": "live", "platformWallet": null, "duplicate": true } } },
+          "expect": { "status": 200, "data": { "newBalance": { "coins": 101 }, "walletId": "platform", "walletScope": "live", "platformWallet": null, "duplicate": true } } },
         { "method": "GET", "path": "/economy/platform-wallet",
-          "expect": { "status": 200, "data": { "coins": 90 } } }
+          "expect": { "status": 200, "data": { "coins": 101 } } }
       ]
     },
     {
       "name": "spends are checked against the item",
-      "given": { "platformWallet": { "coins": 100 } },
+      "given": { "platformWallet": { "coins": 500 } },
       "steps": [
         { "method": "POST", "path": "/economy/platform-wallet/spend", "body": { "gameId": "game-1" },
           "expect": { "status": 400, "error": { "code": "INVALID_ARGUMENT", "message": "Missing required fields: gameId, itemId" } } },
@@ -415,7 +421,7 @@
         { "method": "POST", "path": "/economy/platform-wallet/spend", "body": { "gameId": "game-1", "itemId": "banner" },
           "expect": { "status": 409, "error": { "code": "INVALID_STATE", "message": "Item is not eligible for platform wallet purchases" } } },
         { "method": "POST", "path": "/economy/platform-wallet/spend", "body": { "gameId": "game-1", "itemId": "skin" },
-          "expect": { "status": 409, "error": { "code": "INVALID_STATE", "message": "Item price is not in a supported platform wallet currency" } } },
+          "expect": { "status": 409, "error": { "code": "INVALID_STATE", "message": "Item is not eligible for platform wallet purchases" } } },
         { "method": "POST", "path": "/economy/platform-wallet/spend", "body": { "gameId": "game-1", "itemId": "freebie" },
           "expect": { "status": 409, "error": { "code": "INVALID_STATE", "message": "Item price is invalid" } } }
       ]

@@ -2,7 +2,7 @@
 
 Unity SDK package for integrating games with the SusaPlay platform.
 
-Latest stable release tag: `v1.10.0`
+Latest stable release tag: `v1.11.0`
 
 This package is intended for games that run inside the SusaPlay shell on WebGL today. The current implementation is real and usable, but still evolving. We are intentionally exposing all implemented methods so game teams can integrate early and help us tune the SDK against real game behavior.
 
@@ -133,7 +133,7 @@ Notes:
 
 Available methods:
 
-- `Task<PurchaseResult> StartPurchase(bool sandbox = false)`
+- `Task<PurchaseResult> StartPurchase(bool sandbox = false)` — obsolete since 1.11.0: names no item, which the platform refuses
 - `Task<PurchaseResult> StartDirectItemPurchase(string itemId, bool sandbox = false)`
 - `Task<PurchaseResult> StartWalletTopupPurchase(string topupPackId, bool sandbox = false)`
 - `Task<StoreCatalogResult> GetStoreItems()`
@@ -182,7 +182,10 @@ Current behavior notes:
   status before responding to the SDK
 - use `GetStoreItems()` to build your in-game shop UI from platform data
 - use `GetTopupPacks()` to build SusaPlay wallet top-up UI
-- use `SpendPlatformWallet(itemId)` only for items that are wallet-eligible
+- every item has a money price (`cashPrice`, from a SusaPlay price tier) and, only when you allow
+  it in the Developer Portal, a coin price (`coinPrice`). See "Fetch game store items" below
+- use `StartDirectItemPurchase(itemId)` only when `directPurchaseEnabled` is true, and
+  `SpendPlatformWallet(itemId)` only when `walletPurchaseEligible` is true
 
 ### AdsModule (v1.8.0+)
 
@@ -300,7 +303,7 @@ Use Unity Package Manager with a Git URL pinned to a release tag:
 ```json
 {
   "dependencies": {
-    "com.susaplay.sdk": "https://github.com/Susa-Games/com.susaplay.sdk.git#v1.10.0"
+    "com.susaplay.sdk": "https://github.com/Susa-Games/com.susaplay.sdk.git#v1.11.0"
   }
 }
 ```
@@ -308,11 +311,11 @@ Use Unity Package Manager with a Git URL pinned to a release tag:
 You can also use:
 
 - Unity -> Window -> Package Manager -> Add package from git URL
-- `https://github.com/Susa-Games/com.susaplay.sdk.git#v1.10.0`
+- `https://github.com/Susa-Games/com.susaplay.sdk.git#v1.11.0`
 
 Versioning notes:
 
-- Use a tag such as `#v1.10.0` when you want a reproducible release install
+- Use a tag such as `#v1.11.0` when you want a reproducible release install
 - Use `#main` only if you intentionally want the moving head of development
 - Use `#latest` for the newest published SDK branch maintained by SusaPlay
 - Use `#release` for the current stable SDK branch maintained by SusaPlay
@@ -436,13 +439,29 @@ if (catalog.Success)
 {
     foreach (var item in catalog.Items)
     {
-        // `price` is what the platform wallet is charged. A real-money direct
-        // purchase is priced in the payment provider's own catalogue and is not
-        // returned here, so do not present this figure as a cash price.
-        Debug.Log($"{item.name}: {item.price.amount} {item.price.currency}");
+        // Money: the item's price tier, in US dollars. Players pay the equivalent in
+        // their own currency at checkout.
+        if (item.directPurchaseEnabled)
+            Debug.Log($"{item.name}: ${item.cashPrice.amount:0.00}");
+
+        // Coins: only when you allowed paying with coins for this item. Disable the
+        // button while the player's balance is below the price.
+        if (item.walletPurchaseEligible)
+            Debug.Log($"{item.name}: {item.coinPrice} coins");
     }
 }
 ```
+
+| Field | Meaning |
+| --- | --- |
+| `cashPrice.amount` + `cashPrice.currency` | the money price, for display — e.g. 4.99 USD |
+| `cashPrice.amountMinor` | the same in minor units — 499. Use for comparisons |
+| `coinPrice` | the coin price, or 0 when the item cannot be bought with coins |
+| `directPurchaseEnabled` | it can be bought with money now |
+| `walletPurchaseEligible` | it can be bought with coins now |
+
+These fields need SDK 1.11.0 or newer. `price` still carries the coin price for older code.
+A coin purchase earns you nothing; only money purchases are paid out.
 
 ### Top up the SusaPlay wallet
 
@@ -522,6 +541,7 @@ We recommend pinned Git tags:
 - `v1.9.0`
 - `v1.9.1`
 - `v1.10.0`
+- `v1.11.0`
 
 Guidelines:
 

@@ -32,6 +32,12 @@ namespace susaplay.SDK
         /// For every other caller the purchase is live regardless of this flag.
         /// Sandbox balances live in a separate wallet and never mix with real ones.
         /// </param>
+        /// <remarks>
+        /// Names no item. The platform used to pick the game's only purchasable item; since
+        /// items are priced on shared price tiers it needs the item, and refuses this with
+        /// <c>INVALID_ARGUMENT</c>. Use <see cref="StartDirectItemPurchase"/>.
+        /// </remarks>
+        [Obsolete("Names no item, which the platform refuses. Use StartDirectItemPurchase(itemId).")]
         public Task<PurchaseResult> StartPurchase(bool sandbox = false)
         {
             return StartDirectItemPurchase(null, sandbox);
@@ -497,10 +503,45 @@ namespace susaplay.SDK
         public string description;
         public string iconUrl;
         public string type;
+
+        /// <summary>The platform price tier the item is priced on, e.g. <c>tier_499</c>.
+        /// Null for an item that has none. Since 1.11.0.</summary>
+        public string priceTier;
+
+        /// <summary>What the item costs in money — show this on a "buy" button that calls
+        /// <see cref="PurchasesModule.StartDirectItemPurchase"/>. <c>amountMinor</c> is 0 when the
+        /// item has no price. Since 1.11.0.</summary>
+        public StoreItemCashPrice cashPrice;
+
+        /// <summary>What the item costs in platform coins, or 0 when it cannot be bought with
+        /// coins — the developer did not allow it. Since 1.11.0.</summary>
+        public int coinPrice;
+
+        /// <summary>The coin price in the shape SDKs before 1.11.0 read: currency
+        /// <c>coins</c>, amount <see cref="coinPrice"/>. Prefer <see cref="coinPrice"/>.</summary>
         public StoreItemPrice price;
+
+        /// <summary>The developer allows paying for this item with platform coins.</summary>
         public bool walletPurchaseEnabled;
+
+        /// <summary>It can be bought with coins now: allowed and priced. Call
+        /// <see cref="PurchasesModule.SpendPlatformWallet"/> only when this is true, and disable
+        /// the button while the player's balance is below <see cref="coinPrice"/>.</summary>
         public bool walletPurchaseEligible;
+
+        /// <summary>It can be bought with money now: its price tier is on sale.</summary>
         public bool directPurchaseEnabled;
+    }
+
+    [Serializable]
+    public class StoreItemCashPrice
+    {
+        /// <summary>Minor units, e.g. 499 for $4.99. Use for comparisons.</summary>
+        public int amountMinor;
+        /// <summary>ISO currency, e.g. "USD".</summary>
+        public string currency;
+        /// <summary>The same price in whole units, e.g. 4.99. Use for display only.</summary>
+        public float amount;
     }
 
     [Serializable]

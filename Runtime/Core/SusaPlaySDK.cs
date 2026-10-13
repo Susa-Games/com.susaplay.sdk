@@ -56,7 +56,7 @@ namespace susaplay.SDK
             }
         }
 
-        private const string SdkVersion = "1.10.0";
+        private const string SdkVersion = "1.11.0";
         private const int InitTimeoutMs = 15000;
         private static bool _isInitialized;
         private static bool _didSendGameLoaded;

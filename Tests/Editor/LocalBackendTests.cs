@@ -350,11 +350,14 @@ namespace susaplay.SDK.Editor.Tests
         }
 
         [Test]
-        public void AnItemPricedInAGameCurrencyCannotBeBoughtFromThePlatformWallet()
+        public void AnItemWhoseDeveloperDidNotAllowCoinsCannotBeBoughtWithThem()
         {
+            // Paying with coins is opt-in per item; an item without the flag is off.
+            _sim.State.platformWallet.coins = 100;
             var response = _sim.Post("/economy/platform-wallet/spend", "{\"gameId\":\"game_1\",\"itemId\":\"skin\"}");
 
             Assert.AreEqual("INVALID_STATE", response.ErrorCode);
+            Assert.AreEqual("Item is not eligible for platform wallet purchases", response.ErrorMessage);
         }
 
         [Test]

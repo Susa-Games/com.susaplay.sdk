@@ -2,6 +2,21 @@
 
 All notable changes to `com.susaplay.sdk` should be documented in this file.
 
+## [1.11.0] - 2026-10-13
+
+Changed:
+
+- Items are priced on SusaPlay price tiers. `StoreItemEntry` gains `priceTier`, `cashPrice`
+  (`amountMinor`, `currency`, `amount`) and `coinPrice`. `price` now carries the coin price, so
+  older code keeps showing a number; read `coinPrice` and `cashPrice` instead.
+- Paying with coins is opt-in per item: `walletPurchaseEligible` is false and `coinPrice` is 0
+  unless the developer allowed it in the Developer Portal.
+- `StartPurchase()` is obsolete. It names no item, and the platform now refuses that: many
+  items share a price tier, so the platform cannot guess which one was meant. Use
+  `StartDirectItemPurchase(itemId)`.
+- Editor Simulator: a coin spend charges the item's exported `coinPrice` and needs the item's
+  coin opt-in. Download a fresh configuration from the Developer Portal.
+
 ## [1.10.0] - 2026-10-13
 
 Changed:

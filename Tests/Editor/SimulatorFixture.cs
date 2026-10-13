@@ -21,9 +21,9 @@ namespace susaplay.SDK.Editor.Tests
               ""type"": ""incremental"", ""targetValue"": 3, ""points"": 50 }
           ],
           ""items"": {
-            ""sword"": { ""name"": ""Sword"", ""type"": ""durable"", ""price"": { ""currency"": ""coins"", ""amount"": 30 } },
-            ""potion"": { ""name"": ""Potion"", ""type"": ""consumable"", ""price"": { ""currency"": ""coins"", ""amount"": 10 } },
-            ""skin"": { ""name"": ""Skin"", ""type"": ""durable"", ""price"": { ""currency"": ""gold"", ""amount"": 5 } }
+            ""sword"": { ""name"": ""Sword"", ""type"": ""durable"", ""priceTier"": ""tier_299"", ""walletPurchaseEnabled"": true, ""coinPrice"": 30 },
+            ""potion"": { ""name"": ""Potion"", ""type"": ""consumable"", ""priceTier"": ""tier_99"", ""walletPurchaseEnabled"": true, ""coinPrice"": 10 },
+            ""skin"": { ""name"": ""Skin"", ""type"": ""durable"", ""priceTier"": ""tier_199"", ""coinPrice"": null }
           },
           ""adSettings"": { ""rewarded"": { ""enabled"": true, ""rewardAmount"": 25, ""maxPerDay"": 2, ""cooldownMinutes"": 30 } },
           ""responses"": {

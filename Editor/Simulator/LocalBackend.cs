@@ -665,17 +665,15 @@ namespace susaplay.SDK.Editor.Simulator
             {
                 return Error("ITEM_NOT_FOUND", "Item not found in economy config", 404);
             }
-            if (Get(item, "walletPurchaseEnabled") is bool enabled && !enabled)
+            // Off unless the developer opted in: an item without the field is not for coins.
+            if (!(Get(item, "walletPurchaseEnabled") is bool enabled && enabled))
             {
                 return Error("INVALID_STATE", "Item is not eligible for platform wallet purchases", 409);
             }
-            var price = Get(item, "price") as Dictionary<string, object> ?? new Dictionary<string, object>();
-            var currency = PyStr(Truthy(Get(price, "currency")) ? Get(price, "currency") : "").Trim();
-            if (currency != "coins" && currency != "gems")
-            {
-                return Error("INVALID_STATE", "Item price is not in a supported platform wallet currency", 409);
-            }
-            var amount = ToIntAmount(Get(price, "amount"));
+            // The platform derives the coin price from the item's price tier and its coin value,
+            // and exports it as coinPrice; nothing here re-derives it.
+            var currency = "coins";
+            var amount = Get(item, "coinPrice") == null ? 0 : ToIntAmount(Get(item, "coinPrice"));
             if (amount <= 0)
             {
                 return Error("INVALID_STATE", "Item price is invalid", 409);
