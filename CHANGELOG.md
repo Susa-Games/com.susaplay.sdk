@@ -2,12 +2,343 @@
 
 All notable changes to `com.susaplay.sdk` should be documented in this file.
 
+## [1.12.0] - 2026-10-18
+
+Added:
+
+- `SusaPlaySDK.ExitToHost()` and `SusaPlaySDK.CanExitToHost`: a game inside a partner's app
+  can send the player back to it. Show a back button only while `CanExitToHost` is true. The
+  Editor Simulator gains an "Inside a partner's app" toggle to test it.
+- Cloud Save logs a warning for every failed save or load, with the HTTP status. Status 0 is
+  called out as "offline, or blocked by the browser", which the platform cannot see at all.
+
+Changed:
+
+- Interstitials have their own switch in the game's ad settings (`interstitial.enabled`) and no
+  longer follow `rewarded.enabled`. A game with rewarded ads off can still show interstitials,
+  and the other way round. The Editor Simulator reads `adSettings.interstitial` from the
+  configuration file; a file without it treats interstitials as on.
+
+## [1.11.0] - 2026-10-13
+
+Changed:
+
+- Items are priced on SusaPlay price tiers. `StoreItemEntry` gains `priceTier`, `cashPrice`
+  (`amountMinor`, `currency`, `amount`) and `coinPrice`. `price` now carries the coin price, so
+  older code keeps showing a number; read `coinPrice` and `cashPrice` instead.
+- Paying with coins is opt-in per item: `walletPurchaseEligible` is false and `coinPrice` is 0
+  unless the developer allowed it in the Developer Portal.
+- `StartPurchase()` is obsolete. It names no item, and the platform now refuses that: many
+  items share a price tier, so the platform cannot guess which one was meant. Use
+  `StartDirectItemPurchase(itemId)`.
+- Editor Simulator: a coin spend charges the item's exported `coinPrice` and needs the item's
+  coin opt-in. Download a fresh configuration from the Developer Portal.
+
+## [1.10.0] - 2026-10-13
+
+Changed:
+
+- `AdResult.Rewarded` now means the rewarded ad was watched to the end — grant your game's own
+  reward on it. It used to mean the platform had credited coins, so it was false at the
+  platform's daily limit or in its cooldown, and a game's "extra life" for a fully watched ad
+  depended on the platform's coin rules. The platform reports the watched ad either way.
+- Platform coins for rewarded ads are platform-wide settings now, the same for every game, and
+  only signed-in players earn them; a guest earns none, not even held for later. The Editor
+  Simulator follows: a guest's rewarded ad completes with `Rewarded = true` and no coins, and the
+  default reward is the platform's 1 coin.
+
+Added:
+
+- `AdResult.CoinsAwarded`: the platform coins credited for this ad, or 0. Informational — they
+  are already in the wallet.
+
+## [1.9.1] - 2026-10-06
+
+Changed:
+
+- The SDK calls `https://api.susaplay.com` instead of the platform's Cloud Functions host
+  (`europe-west1-susaplay-2e8e3.cloudfunctions.net`), which compiled a Google Cloud project id
+  into every game build. Builds made with older SDKs keep working on the old host.
+
+  This needs the platform's API site to route the SDK's routes, which ships with this release.
+  `PlatformConfig`'s live URL override still takes precedence when set.
+
+Fixed:
+
+- Emulator mode called `http://localhost:5001/save/write`, where no function answers: the
+  Functions emulator serves `/{project}/{region}/{function}/...`. It now calls
+  `http://127.0.0.1:5001/susaplay-2e8e3/europe-west1`.
+
+Editor Simulator — now matches the platform's fixes:
+
+- A purchase of a durable item the player already owns is refused before checkout, with
+  `token-failed` and "Durable item is already owned", as the platform now does — previously the
+  player was charged and the grant failed.
+- An analytics `level_up` without a valid `level` is dropped, as the platform now does, with a
+  Console warning; the rest of the batch is still accepted.
+- `SDK_PURCHASE_RESPONSE` carries `walletScope`, so `PurchaseResult.WalletScope` is `live` once
+  checkout has opened. The SusaPlay pages now send it too; it was always empty before.
+- `SDK_AUTH_COMPLETE` also carries the token, as the pages send it.
+
+## [1.9.0] - 2026-10-06
+
+Added:
+
+- The Editor Simulator. In the Unity Editor the SDK no longer waits 15 seconds for a page that
+  does not exist and leaves every module null: the simulator answers instead, so a game's
+  integration can be tested in Play Mode without a WebGL build. Open it with
+  `SusaPlay -> Simulator`; the README's "Test in the Unity Editor" covers it in full.
+
+  It has two halves. The Editor Shell plays the page's part of the bridge — `SDK_READY`, tokens,
+  checkout, ads, sign-in — as the player portal's play page does. The local backend answers the
+  13 routes the SDK's modules call with the platform's rules, status codes, error codes, messages
+  and response shapes, quirks included, from state kept in `Library/SusaPlaySimulator/`. Nothing
+  leaves the machine and nothing is written to the platform.
+
+  To keep the two implementations of those routes the same, the platform publishes contract
+  cases it proves against its real handlers; `Tests/Editor/Contract/` holds a copy and an
+  EditMode test runs every case against the simulator.
+
+  A game's achievements, store, top-up packs and ad settings come from a file the developer
+  downloads from the game's page in the Developer Portal and imports in the window. Without it
+  the simulator behaves like the platform for a game with nothing configured.
+
+- `SusaPlaySDK.IsSimulated` — true while the simulator is answering, always false in a build. For
+  a debug badge only.
+
+Changed:
+
+- `WebGLBridge` and `HttpClient` have Editor-only hooks the simulator sets. They compile only
+  under `UNITY_EDITOR` and are internal, so builds and the public API are unchanged.
+- In the Editor, the simulated HTTP path does not request an App Check token; the simulator does
+  not check one.
+
+## [1.8.1] - 2026-10-06
+
+Fixed:
+
+- The second Play in the Unity Editor reused the first one's SDK state when domain reload is
+  turned off (Enter Play Mode Options). The SDK keeps its state in static fields, which a WebGL
+  page load always starts fresh but the Editor keeps between Plays: `Initialize()` handed back the
+  previous session's task, the modules from that session stayed in place, and every handler it had
+  subscribed to `WebGLBridge.OnMessageReceived` still ran on the next session's messages. The SDK
+  now resets all of it when each run starts, before any scene loads. Builds are unaffected.
+
+## [1.8.0] - 2026-09-29
+
+Added:
+
+- `SusaPlaySDK.Ads` — `ShowRewarded()` and `ShowInterstitial()`, both returning an `AdResult`.
+
+  The platform has implemented rewarded ads for some time: the page hosting a game answers an
+  `SDK_AD_SHOW` message by picking a network from the game's ad settings, falling back to a house
+  ad or a placeholder, and crediting the reward server-side when the ad is watched. The SDK
+  exposed none of it, so a game could only reach ads by writing raw `WebGLBridge` messages against
+  an undocumented contract. This module is that contract, typed.
+
+  `AdResult.Success` and `AdResult.Rewarded` are separate answers and a game must read the second
+  one before granting anything. The reward's daily cap and cooldown are enforced on the server
+  *after* the ad has played, so an ad can finish in full and still credit nothing — `Success` true,
+  `Rewarded` false. Treating `Success` as "pay the player" hands out rewards the platform refused.
+
+  `AdResult.Reason` carries the failure: `ADS_DISABLED` when the game's own settings have ads off,
+  `TIMEOUT` when the SDK gives up waiting, and otherwise whatever the chosen network reported.
+
+  Note that the platform gates *every* ad type behind the game's `rewarded.enabled` setting, so an
+  interstitial is refused with `ADS_DISABLED` while rewarded ads are off, even though it pays no
+  reward.
+
+Fixed:
+
+- The version string sent to the platform in `SDK_INIT` was pinned at `1.6.0` while the package
+  shipped 1.7.0. It is a constant separate from `package.json`, so a release that bumped one and
+  not the other went unnoticed — every 1.7.0 client identified itself as 1.6.0 in the platform's
+  logs, which is the one place the number is read.
+
+## [1.7.0] - 2026-09-21
+
+Added:
+
+- `TopupPackEntry.priceAmount`, `.priceAmountMinor` and `.priceCurrency` — what a top-up pack
+  actually costs the player. The server has always sent all three; `TopupPackEntry` declared no
+  field for them, so `JsonUtility` dropped them on parse and a game had no way to show a price.
+
+  The fields already on the entry, `amount` and `currency`, are what the player *receives* — 100
+  coins. What they *pay* is `priceAmount` in `priceCurrency` — 0.99 USD. A store panel that shows
+  `amount` as the price tells the player the wrong number, which is exactly what happened while
+  the price fields were missing.
+
+  Use `priceAmountMinor` (99) for comparison or arithmetic and `priceAmount` (0.99) for display.
+  Money is whole minor units everywhere on the server, so keeping the integer authoritative is
+  what stops a rounding error reaching a charge.
+
+Fixed:
+
+- `SusaPlaySDK.Initialize()` is now safe to call from more than one component. It guarded on a
+  flag that is only set once `SDK_READY` arrives, so two components calling it in the same frame
+  both ran the whole body: the bridge handler was subscribed twice, the second run replaced the
+  init `TaskCompletionSource`, and `SDK_READY` then completed the same source twice. That threw
+  out of a browser callback, which Unity reports as the fatal "An error occurred running the Unity
+  content on this page" dialog rather than as a catchable exception — and the first caller was
+  left awaiting a source nothing would ever complete.
+
+  Every caller now receives the same in-flight `Task`. A run that fails or times out clears it, so
+  a later call can still retry.
+
+## [1.6.0] - 2026-09-16
+
+Added:
+
+- `SusaPlaySDK.Auth.GetSessionTokenAsync()` — the player's short-lived, game-scoped session token,
+  for a game whose own backend runs outside this platform and needs to know which player is calling
+  it. The SDK already fetched this token for its own HTTP calls; it simply had no way out, because
+  `TokenManager` was held in a private field with no accessor. Nothing about how the token is
+  obtained or cached changed.
+
+  Returns null for a guest, who has no platform account and therefore no identity to mint a token
+  for. A feature built on this must degrade for guests rather than fail.
+
+  The first caller is NotAloneNever, whose match servers run on AWS: the game sends this token to
+  its own match broker, and the broker asks the platform who it belongs to before spending money on
+  a server. Without it there was no way for a game's own backend to tell one player from another,
+  and no path existed that would ever mint the token — the shell only mints one when the game asks,
+  and no game could ask.
+
+Changed:
+
+- `AuthModule.Initialize` takes an optional `TokenManager`. Only `SusaPlaySDK` calls it; a game
+  that somehow did will still compile, and `GetSessionTokenAsync` then returns null with a warning
+  rather than throwing.
+
+## [1.5.0] - 2026-09-14
+
+Breaking:
+
+- The purchase API is no longer named after a payment provider. `StartXsollaPurchase` is now
+  `StartPurchase`, `XsollaPurchaseResult` is now `PurchaseResult`, and `XsollaWalletSnapshot` is
+  now `GameWalletSnapshot`. The wire messages `SDK_XSOLLA_PURCHASE` and
+  `SDK_XSOLLA_PURCHASE_RESPONSE` are now `SDK_PURCHASE` and `SDK_PURCHASE_RESPONSE`.
+
+  No deprecated aliases were kept. The old names were renamed rather than bridged because no
+  published game was using them yet; a game built against 1.x must be rebuilt against 2.0.
+
+Added:
+
+- `PurchaseResult.WalletScope` — "live" or "sandbox", which wallet the balance landed in. The
+  server always sent it; nothing read it, so a purchase that credited the developer test wallet
+  looked identical to one that did not credit at all.
+
+Removed:
+
+- `StoreItemEntry.xsollaSku` and `TopupPackEntry.xsollaSku`. The server stopped returning the
+  provider's internal SKU to clients — it is resolved server-side at checkout — so these fields
+  were always empty.
+
+Notes:
+
+- Nothing about the purchase flow changed, only its names. The platform decides which provider
+  takes the payment, and the SDK never needed to know which one that was — carrying the name in
+  the public API meant that switching provider would have broken every game.
+
+## [1.3.0] - 2026-08-11
+
+Added:
+
+- `session_start` is now emitted automatically during SDK init. Previously nothing in the SDK
+  ever queued an event, so a game that never called `LogEvent` produced no analytics at all and
+  its DAU / MAU / retention stayed empty.
+
+Fixed:
+
+- `TokenManager.GetTokenAsync` had no timeout. If the shell never sent `SDK_TOKEN_RESPONSE` the
+  await never returned, and since every HTTP call goes through it the SDK hung silently with no
+  error and no retry. It now times out after 10s and returns null, so the request fails with an
+  observable 401 instead.
+- `AppCheckManager` used a 5s timeout — the same value the shell uses for its own reply — so a
+  slow first load could race and make the SDK give up just before the shell answered. A single
+  timeout also disabled App Check permanently for the session. The timeout is now 8s, and App
+  Check is only written off after two consecutive silences; any reply (even a null token) resets
+  the counter.
+- Bridge handlers in `TokenManager`, `AppCheckManager`, `AuthModule`, `ApiModule` and
+  `PurchasesModule` unsubscribe before subscribing. A retried init previously left the old module
+  attached to `WebGLBridge.OnMessageReceived` for the life of the page, which could call
+  `SetResult` twice on the same `TaskCompletionSource`.
+
+Changed:
+
+- Version promoted from `1.3.0-pre.1` to `1.3.0`
+
+## [1.3.0-pre.1] - 2026-08-07
+
+Added:
+
+- `SusaPlaySDK.LiveOps.RefreshAsync()` for cached public-manifest delivery
+- Explicit models for missions, single offers, chained offers, and boosted IAP offers
+- Persistent 15-minute cache with offline fallback and origin cache-busting support
+- `SDKConfig.LiveOpsContentBaseUrl` and setup-wizard configuration
+
+Changed:
+
+- SDK prerelease version bumped to `1.3.0-pre.1`
+
+## [1.2.3] - 2026-07-21
+
+Added:
+
+- `AppCheckManager` — automatically requests a Firebase App Check token from the shell before every HTTP call via new bridge messages `SDK_GET_APP_CHECK_TOKEN` / `SDK_APP_CHECK_TOKEN_RESPONSE`. Token cached for 50 minutes. No game-side configuration required.
+- `HttpClient` now attaches `X-Firebase-AppCheck` header when an App Check token is available
+
+Changed:
+
+- `HttpClient` constructor accepts an optional `AppCheckManager` parameter (backward compatible — defaults to null)
+- `SusaPlaySDK` initializes `AppCheckManager` alongside `TokenManager` on startup
+- SDK version bumped to `1.2.3`
+
+Notes:
+
+- If the shell does not respond to `SDK_GET_APP_CHECK_TOKEN` within 5 seconds (older shells), the SDK proceeds without the header — backend currently allows this
+- When `APP_CHECK_ENFORCEMENT=true` is set on backend Cloud Functions, requests without a valid App Check token will return 401
+- Game shell must handle `SDK_GET_APP_CHECK_TOKEN` and return `SDK_APP_CHECK_TOKEN_RESPONSE` — updated game-shell includes this handler with lazy Firebase App Check initialization
+- Cloud save `data` field is unchanged in the API response regardless of backend storage changes (GCS migration is transparent)
+- Analytics events now stream to BigQuery directly on the backend — no SDK change required
+
+## [Unreleased]
+
+Added:
+
+- Automatic analytics flushing on SDK ready, app pause/quit, and a configurable interval that defaults to 5 minutes
+- `SusaPlaySDK.Webhooks.SendEvent(...)` for custom operational webhook events
+- `PurchasesModule.GetStoreItems()`
+- `PurchasesModule.GetTopupPacks()`
+- `PurchasesModule.GetPlatformWallet()`
+- `PurchasesModule.SpendPlatformWallet(string itemId)`
+- `PurchasesModule.StartDirectItemPurchase(string itemId, bool sandbox = false)`
+- `PurchasesModule.StartWalletTopupPurchase(string topupPackId, bool sandbox = false)`
+- `SusaPlaySDK.Api` for B2B partner API bridge calls from partner iframe embeds
+
+Changed:
+
+- WebGL analytics now sends `SDK_LOG_EVENT` through the shell bridge instead of using the hardcoded production Functions URL
+- WebGL custom webhook events now send `SDK_CUSTOM_WEBHOOK_EVENT` through the shell bridge
+- Webhook subscriptions now use `CUSTOM_WEBHOOK_EVENT` for `SusaPlaySDK.Webhooks.SendEvent(...)`
+- `AnalyticsModule.LogB2BEvent(...)` is deprecated; use `SusaPlaySDK.Webhooks.SendEvent(...)`
+- Xsolla purchase messaging now supports explicit purchase intents
+- README examples now describe direct-item purchases and wallet top-ups
+- platform commerce contract now includes store catalog fetch for games
+- README now documents partner API bridge usage and CloudSave progress persistence
+
+Notes:
+
+- `StartXsollaPurchase(bool sandbox = false)` remains for backward compatibility
+- explicit direct-item and wallet-topup methods are now the recommended path
+- partner API bridge calls require admin-configured partner `externalApi` settings
+
 ## [1.2.0] - 2026-04-30
 
 Added today:
 
 - `AnalyticsModule.LogB2BEvent(...)` for webhook-bound B2B JSON payloads
-- updated package metadata and README examples for `v1.2.0`
+- updated package metadata and README examples for `v1.2.2`
 
 ## [1.1.1] - 2026-04-07
 

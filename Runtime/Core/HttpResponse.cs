@@ -9,13 +9,15 @@ namespace susaplay.SDK
         public bool Success;
         public string Data;
         public string Error;
+        public long StatusCode;
 
-        public static HttpResponse Fail(string error)
+        public static HttpResponse Fail(string error, long statusCode = 0)
         {
             return new HttpResponse
             {
                 Success = false,
-                Error = error
+                Error = error,
+                StatusCode = statusCode
             };
         }
     }

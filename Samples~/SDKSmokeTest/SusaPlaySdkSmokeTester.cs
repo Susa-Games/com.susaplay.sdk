@@ -164,6 +164,7 @@ namespace susaplay.SDK.Samples
             Log("Running positive cases...");
             await RunAnalyticsHappyPathAsync(runId);
             await RunCloudSaveHappyPathAsync(runId, slot);
+            await RunStoreCatalogHappyPathAsync();
         }
 
         private async Task RunNegativeCasesAsync(string runId)
@@ -282,11 +283,11 @@ namespace susaplay.SDK.Samples
             );
 
             await ExecuteCase(
-                "B2B analytics payload",
+                "Custom webhook payload",
                 ExpectedOutcome.Success,
                 async () =>
                 {
-                    var payload = new B2BAnalyticsPayload
+                    var payload = new CustomWebhookPayload
                     {
                         runId = runId,
                         webhookType = "smoke_test",
@@ -294,8 +295,8 @@ namespace susaplay.SDK.Samples
                         timestampUtc = DateTime.UtcNow.ToString("o")
                     };
 
-                    SusaPlaySDK.Analytics.LogB2BEvent(payload);
-                    await WithTimeout(SusaPlaySDK.Analytics.Flush(), defaultTimeoutMs);
+                    SusaPlaySDK.Webhooks.SendEvent("smoke_test", payload);
+                    await Task.CompletedTask;
                     return true;
                 }
             );
@@ -424,6 +425,26 @@ namespace susaplay.SDK.Samples
                     Log("Load(after save) data=" + Safe(loadResult.Data));
 
                     return loadResult.Success && !string.IsNullOrEmpty(loadResult.Data) && loadResult.Data.Contains(runId);
+                }
+            );
+        }
+
+        private async Task RunStoreCatalogHappyPathAsync()
+        {
+            await ExecuteCase(
+                "Purchases.GetStoreItems",
+                ExpectedOutcome.Success,
+                async () =>
+                {
+                    var result = await WithTimeout(
+                        SusaPlaySDK.Purchases.GetStoreItems(),
+                        defaultTimeoutMs
+                    );
+                    if (result.Success)
+                    {
+                        Log("Store items fetched=" + result.Items.Length);
+                    }
+                    return result.Success;
                 }
             );
         }
@@ -598,7 +619,7 @@ namespace susaplay.SDK.Samples
         }
 
         [Serializable]
-        private class B2BAnalyticsPayload
+        private class CustomWebhookPayload
         {
             public string runId;
             public string webhookType;

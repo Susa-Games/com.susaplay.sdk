@@ -59,6 +59,37 @@ mergeInto(LibraryManager.library, {
       );
     }
 
+    function invokeStringCallback(callbackPtr, buffer) {
+      if (typeof dynCall_vi === "function") {
+        dynCall_vi(callbackPtr, buffer);
+        return;
+      }
+
+      if (typeof Module !== "undefined" && typeof Module.dynCall_vi === "function") {
+        Module.dynCall_vi(callbackPtr, buffer);
+        return;
+      }
+
+      if (typeof getWasmTableEntry === "function") {
+        getWasmTableEntry(callbackPtr)(buffer);
+        return;
+      }
+
+      var table = null;
+      if (typeof wasmTable !== "undefined") {
+        table = wasmTable;
+      } else if (typeof Module !== "undefined" && Module["wasmTable"]) {
+        table = Module["wasmTable"];
+      }
+
+      if (table) {
+        table.get(callbackPtr)(buffer);
+        return;
+      }
+
+      throw new Error("[susaplay] Unable to invoke WebGL message callback.");
+    }
+
     resolveShellOrigin();
     window.addEventListener("message", function (event) {
       if (!isAllowedOrigin(event.origin)) return;
@@ -66,8 +97,11 @@ mergeInto(LibraryManager.library, {
       var len = lengthBytesUTF8(json) + 1;
       var buffer = _malloc(len);
       stringToUTF8(json, buffer, len);
-      dynCall_vi(callbackPtr, buffer);
-      _free(buffer);
+      try {
+        invokeStringCallback(callbackPtr, buffer);
+      } finally {
+        _free(buffer);
+      }
     });
   },
 });

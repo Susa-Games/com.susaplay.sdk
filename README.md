@@ -2,7 +2,7 @@
 
 Unity SDK package for integrating games with the SusaPlay platform.
 
-Latest stable release tag: `v1.2.0`
+Latest stable release tag: `v1.12.0`
 
 This package is intended for games that run inside the SusaPlay shell on WebGL today. The current implementation is real and usable, but still evolving. We are intentionally exposing all implemented methods so game teams can integrate early and help us tune the SDK against real game behavior.
 
@@ -23,8 +23,15 @@ If you use a method that exists in the package, you may use it. If a feature is 
 - `await SusaPlaySDK.Initialize()`
 - `SusaPlaySDK.Auth`
 - `SusaPlaySDK.CloudSave`
+- `SusaPlaySDK.Achievements`
 - `SusaPlaySDK.Analytics`
+- `SusaPlaySDK.Webhooks`
 - `SusaPlaySDK.Purchases`
+- `SusaPlaySDK.Ads`
+- `SusaPlaySDK.Api`
+- `SusaPlaySDK.Backend`
+- `SusaPlaySDK.LiveOps`
+- `SusaPlaySDK.GameId`
 
 ### AuthModule
 
@@ -34,6 +41,13 @@ Available properties:
 - `Auth.IsAuthenticated`
 - `Auth.Uid`
 - `Auth.DisplayName`
+
+Available methods:
+
+- `Auth.GetSessionTokenAsync()` — the player's short-lived, game-scoped session token, for a game
+  whose own backend runs outside this platform and needs to know which player is calling it. Send
+  it as `Authorization: Bearer {token}`; that backend then asks the platform who it belongs to.
+  Returns null for a guest, so a feature built on it must degrade rather than fail.
 
 Notes:
 
@@ -54,45 +68,105 @@ Notes:
 - The SDK tracks slot versions locally and sends them with save requests
 - Empty cloud saves are handled as version `0`
 - Conflict handling is still being tuned across real games
+- Save data is stored in Cloud Storage server-side (not Firestore). The API response is unchanged — `data` is always returned as a string in the load response regardless of backend storage
 
 ### AnalyticsModule
 
 Available methods:
 
 - `void LogEvent(string name, string parameters = "{}")`
-- `void LogB2BEvent(string payloadJson)`
-- `void LogB2BEvent(object payload)`
 - `Task Flush()`
 
 Notes:
 
 - Events are queued locally and flushed through the platform shell
-- B2B events accept a JSON object payload that is sent as raw event parameters for platform webhook calls
+- The SDK flushes analytics automatically by default: on SDK ready, on app pause/quit, and every 5 minutes
+- `Flush()` is still available for tests or important gameplay checkpoints
+- The automatic flush interval and lifecycle flushes can be changed in `SusaPlay/Setup`
+- Accepted analytics events can be forwarded to webhooks subscribed to `SDK_ANALYTICS_EVENT`
 - Automatic event schema validation is still minimal in this version
+- Analytics events are now streamed directly to BigQuery on the backend — no Firestore intermediate storage. No SDK change required
+
+### WebhooksModule
+
+Available methods:
+
+- `void SendEvent(string eventName, string payloadJson = "{}")`
+- `void SendEvent(string eventName, object payload)`
+
+Use this for custom operational events that should be delivered through configured
+developer webhooks. Do not send these through analytics unless you also want aggregate
+analytics reporting.
+On WebGL, webhook events are sent through the shell bridge as `SDK_CUSTOM_WEBHOOK_EVENT`.
+
+### ApiModule
+
+Available methods:
+
+- `Task<ApiResult> Get(string endpoint)`
+- `Task<ApiResult> Get(string endpoint, Dictionary<string, string> data)`
+- `Task<ApiResult> Post(string endpoint, string dataJson)`
+- `Task<ApiResult> Request(string method, string endpoint, string dataJson = null)`
+
+Use this only for B2B partner iframe embeds where the game needs partner-owned
+content or services, such as daily questions, live campaign config, or partner
+event data.
+
+The game passes only a relative endpoint:
+
+```csharp
+var result = await SusaPlaySDK.Api.Get("/daily/questions");
+```
+
+Admins configure the partner base URL, allowed endpoint prefixes, and auth secret
+in the SusaPlay admin panel. The secret is injected server-side and is never exposed
+to the game.
+
+Notes:
+
+- endpoints must be relative paths, for example `/daily/questions`
+- only `GET` and `POST` are supported by the current backend bridge
+- the bridge works only in partner iframe embeds
+- use `CloudSave` to store player progress based on partner API content
 
 ### PurchasesModule
 
 Available methods:
 
-- `Task<XsollaPurchaseResult> StartXsollaPurchase(bool sandbox = false)`
+- `Task<PurchaseResult> StartPurchase(bool sandbox = false)` — obsolete since 1.11.0: names no item, which the platform refuses
+- `Task<PurchaseResult> StartDirectItemPurchase(string itemId, bool sandbox = false)`
+- `Task<PurchaseResult> StartWalletTopupPurchase(string topupPackId, bool sandbox = false)`
+- `Task<StoreCatalogResult> GetStoreItems()`
+- `Task<PlatformWalletResult> GetPlatformWallet()`
+- `Task<TopupPacksResult> GetTopupPacks()`
+- `Task<PlatformWalletSpendResult> SpendPlatformWallet(string itemId)`
 
 Notes:
 
-- WebGL purchase flow currently targets Xsolla Pay Station
-- The shell opens Pay Station and returns a structured `SDK_XSOLLA_PURCHASE_RESPONSE`
-- Successful results include the refreshed wallet snapshot when the shell can fetch it
-- The current platform implementation behaves as a wallet top-up flow, not yet a
-  final catalog-driven coin-pack store
+- The platform decides which payment provider takes the payment; the game never names one
+- The shell opens the checkout and returns a structured `SDK_PURCHASE_RESPONSE`
+- Successful results may include a refreshed game wallet or platform wallet snapshot
+- Direct item purchases grant inventory after webhook confirmation
+- Wallet top-ups credit the platform wallet after webhook confirmation
 
 Example:
 
 ```csharp
-var result = await SusaPlaySDK.Purchases.StartXsollaPurchase(true);
+var catalog = await SusaPlaySDK.Purchases.GetStoreItems();
+if (!catalog.Success || catalog.Items.Length == 0)
+{
+    Debug.LogError("No store items found.");
+    return;
+}
+
+var result = await SusaPlaySDK.Purchases.StartDirectItemPurchase(
+    catalog.Items[0].itemId,
+    true
+);
 
 if (result.Success)
 {
     Debug.Log("Purchase status: " + result.Status);
-    Debug.Log("Wallet coins: " + result.Wallet.coins);
 }
 else
 {
@@ -103,33 +177,128 @@ else
 Current behavior notes:
 
 - `sandbox = true` should be used during integration testing
-- the shell may receive a Pay Station `return` / `close` message before the final
+- the shell may receive a checkout `return` / `close` message before the final
   webhook is fully reflected in UI state, so the shell now checks backend purchase
   status before responding to the SDK
-- the current backend credits wallet balance from the observed Xsolla payment
-  amount model
-- wallet balances may currently be fractional during this phase
-- later product work may replace this with catalog-based coin packs or items
+- use `GetStoreItems()` to build your in-game shop UI from platform data
+- use `GetTopupPacks()` to build SusaPlay wallet top-up UI
+- every item has a money price (`cashPrice`, from a SusaPlay price tier) and, only when you allow
+  it in the Developer Portal, a coin price (`coinPrice`). See "Fetch game store items" below
+- use `StartDirectItemPurchase(itemId)` only when `directPurchaseEnabled` is true, and
+  `SpendPlatformWallet(itemId)` only when `walletPurchaseEligible` is true
+
+### AdsModule (v1.8.0+)
+
+```csharp
+var result = await SusaPlaySDK.Ads.ShowRewarded();
+
+if (result.Rewarded)
+{
+    // Watched to the end: grant your game's own reward (an extra life, a doubled score).
+    GrantExtraLife();
+}
+else
+{
+    // Skipped, no ad available, or ads are off for this game.
+    Debug.Log("No reward: " + result.Reason);
+}
+
+// Platform coins the player got for this ad, already in their wallet. 0 for a guest,
+// at the platform's daily limit or in its cooldown. Informational only.
+Debug.Log("Platform coins: " + result.CoinsAwarded);
+```
+
+Interstitials use `ShowInterstitial()`. They reward nothing, so `Rewarded` is always false and
+`Success` is the only answer that matters.
+
+Current behavior notes:
+
+- the SDK loads no ads itself — it asks the page, which picks a network from the game's ad
+  settings and falls back to a house ad or a placeholder
+- `Rewarded` means the rewarded ad was watched to the end (since 1.10.0). Until then it meant
+  the platform had credited coins, and was false at the platform's daily limit or cooldown
+- platform coins for ads are the platform's reward, not your game's: the amount, the daily
+  limit and the cooldown are set by SusaPlay for every game alike, and only signed-in players
+  earn them. Never add coins for an ad yourself
+- rewarded ads and interstitials each have their own switch in the game's ad settings
+  (`rewarded.enabled`, `interstitial.enabled`); a request for a type that is off fails with
+  `ADS_DISABLED`
+- `Reason` is `ADS_DISABLED` when the game has ads off, `TIMEOUT` when the SDK gives up waiting,
+  and otherwise whatever the chosen network reported
+- nothing here pauses the game: the ad is drawn by the page, over the build, and the game keeps
+  running underneath — set `Time.timeScale = 0` yourself if that matters
+
+### Back to the partner's app
+
+Inside a partner's app, show a back button while `SusaPlaySDK.CanExitToHost` is true and call
+`SusaPlaySDK.ExitToHost()` when it is pressed. Save the player's progress first; the partner may
+close the game right away. On SusaPlay itself `CanExitToHost` is false.
+
+### App Check (v1.2.3+)
+
+The SDK automatically requests a Firebase App Check token from the shell before every API call. No game-side configuration is required.
+
+How it works:
+
+- SDK sends `SDK_GET_APP_CHECK_TOKEN` to the shell bridge
+- Shell calls Firebase App Check JS SDK and returns the token via `SDK_APP_CHECK_TOKEN_RESPONSE`
+- SDK attaches the token as `X-Firebase-AppCheck` header on all backend requests
+- Token is cached for 50 minutes; refreshed automatically
+
+If the shell does not respond within 5 seconds (older shells), the SDK proceeds without the header — the backend currently allows this. When `APP_CHECK_ENFORCEMENT=true` is set on the backend functions, requests without a valid App Check token will be rejected with 401.
 
 ### Editor Tooling
 
-Available menu:
+Available menus:
 
-- `SusaPlay -> Setup`
+- `SusaPlay -> Setup` creates or updates `Assets/Resources/PlatformConfig.asset`
+- `SusaPlay -> Simulator` opens the Editor Simulator (v1.9.0+, below)
 
-This creates or updates:
+### Test in the Unity Editor (v1.9.0+)
 
-- `Assets/Resources/PlatformConfig.asset`
+Press Play and the SDK works: in the Unity Editor the Editor Simulator answers the game instead
+of the SusaPlay page and platform, so an integration can be tested without a WebGL build.
+
+- Nothing leaves the machine and nothing is written to the platform. Saves, achievements, the
+  wallet and the inventory are kept in `Library/SusaPlaySimulator/` until you press **Reset**.
+- The simulator answers with the platform's own rules, error codes and response shapes — a stale
+  save version gets `409 VERSION_CONFLICT`, an achievement that is not registered gets
+  `404 NOT_FOUND` — so the game's code takes the paths it will take in production. The rules are
+  pinned by contract cases the platform proves against its real handlers
+  (`Tests/Editor/Contract/`).
+- The player is signed in by default; switch to **Guest** in the window to test the guest path,
+  and **Sign in** during Play as the page's sign-in prompt does.
+- Purchases are paid and ads complete automatically. Set either to **Ask** to answer each one in
+  the window (paid, canceled, closed; complete, skip, no ad).
+- **Next request fails** makes the next request to a route fail with `401`, `500` or a network
+  error, to test the game's error handling.
+- The request log shows every message and request with the platform's verdict. Anything the
+  platform would refuse, or accept and quietly drop, is also a Console warning.
+
+For your game's achievements, store, top-up packs and ad settings, open the game in the Developer
+Portal, click **Download for Unity Editor**, and import the file under **SusaPlay -> Simulator ->
+Import configuration…**. It is stored in `ProjectSettings/`, so commit it and the team shares it;
+nothing in it is secret, and it never reaches a build. Without it the simulator behaves like the
+platform for a game with nothing configured: an empty store and every achievement `NOT_FOUND`.
+
+`SusaPlaySDK.IsSimulated` is true while the simulator is answering. Use it for a debug badge only:
+a game that behaves differently when it is true is no longer testing what players will run.
+
+Still test a WebGL build in the SusaPlay shell (a build preview in the Developer Portal) before
+release. The simulator cannot show WebGL and IL2CPP differences (code stripping, threads),
+browser behaviour, load time, the real checkout, real ads, App Check, or webhook delivery. Builds
+contain none of the simulator: it lives in the Editor assembly, and its hooks compile only in the
+Editor.
 
 ## Planned / In Progress
 
 These features are planned, partially stubbed in the wider platform, or expected to evolve soon. Do not build hard dependencies on them yet unless you are coordinating directly with us.
 
-- rewarded ads and banner ads
+- banner ads
 - richer auth flows and auth callbacks
 - custom event helpers beyond raw analytics
 - mobile runtime path
-- broader purchase / economy modules beyond Xsolla Pay Station
+- broader purchase / economy modules
 - stronger save conflict resolution and merge helpers
 - better initialization result objects and diagnostics
 - stronger validation in editor setup flow
@@ -141,7 +310,7 @@ Use Unity Package Manager with a Git URL pinned to a release tag:
 ```json
 {
   "dependencies": {
-    "com.susaplay.sdk": "https://github.com/Susa-Games/com.susaplay.sdk.git#v1.2.0"
+    "com.susaplay.sdk": "https://github.com/Susa-Games/com.susaplay.sdk.git#v1.12.0"
   }
 }
 ```
@@ -149,11 +318,11 @@ Use Unity Package Manager with a Git URL pinned to a release tag:
 You can also use:
 
 - Unity -> Window -> Package Manager -> Add package from git URL
-- `https://github.com/Susa-Games/com.susaplay.sdk.git#v1.2.0`
+- `https://github.com/Susa-Games/com.susaplay.sdk.git#v1.12.0`
 
 Versioning notes:
 
-- Use `#v1.2.0` or another tag when you want a reproducible release install
+- Use a tag such as `#v1.12.0` when you want a reproducible release install
 - Use `#main` only if you intentionally want the moving head of development
 - Use `#latest` for the newest published SDK branch maintained by SusaPlay
 - Use `#release` for the current stable SDK branch maintained by SusaPlay
@@ -229,14 +398,121 @@ else
 
 ```csharp
 SusaPlaySDK.Analytics.LogEvent("level_started", "{\"level\":3}");
+
+// Optional: the SDK flushes automatically by default.
 await SusaPlaySDK.Analytics.Flush();
 ```
 
-### Log B2B webhook data
+### Send custom webhook data
 
 ```csharp
-SusaPlaySDK.Analytics.LogB2BEvent("{\"matchId\":\"abc123\",\"score\":4200}");
-await SusaPlaySDK.Analytics.Flush();
+SusaPlaySDK.Webhooks.SendEvent(
+    "score_threshold",
+    "{\"matchId\":\"abc123\",\"score\":4200,\"threshold\":1000}"
+);
+```
+
+### Fetch partner-owned data in a B2B embed
+
+```csharp
+var question = await SusaPlaySDK.Api.Get("/daily/questions");
+
+if (!question.Success)
+{
+    Debug.LogError(question.ErrorCode + ": " + question.ErrorMessage);
+    return;
+}
+
+Debug.Log("Question JSON: " + question.Data);
+
+var progressJson = "{\"questionId\":\"q_2026_05_11\",\"seen\":true}";
+await SusaPlaySDK.CloudSave.Save("daily_question_progress", progressJson);
+```
+
+For POST requests:
+
+```csharp
+var answerJson = "{\"questionId\":\"q_2026_05_11\",\"answer\":\"Paris\"}";
+var result = await SusaPlaySDK.Api.Post("/daily/answer", answerJson);
+```
+
+## Commerce Quick Start
+
+### Fetch game store items
+
+```csharp
+var catalog = await SusaPlaySDK.Purchases.GetStoreItems();
+if (catalog.Success)
+{
+    foreach (var item in catalog.Items)
+    {
+        // Money: the item's price tier, in US dollars. Players pay the equivalent in
+        // their own currency at checkout.
+        if (item.directPurchaseEnabled)
+            Debug.Log($"{item.name}: ${item.cashPrice.amount:0.00}");
+
+        // Coins: only when you allowed paying with coins for this item. Disable the
+        // button while the player's balance is below the price.
+        if (item.walletPurchaseEligible)
+            Debug.Log($"{item.name}: {item.coinPrice} coins");
+    }
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `cashPrice.amount` + `cashPrice.currency` | the money price, for display — e.g. 4.99 USD |
+| `cashPrice.amountMinor` | the same in minor units — 499. Use for comparisons |
+| `coinPrice` | the coin price, or 0 when the item cannot be bought with coins |
+| `directPurchaseEnabled` | it can be bought with money now |
+| `walletPurchaseEligible` | it can be bought with coins now |
+
+These fields need SDK 1.11.0 or newer. `price` still carries the coin price for older code.
+A coin purchase earns you nothing; only money purchases are paid out.
+
+### Top up the SusaPlay wallet
+
+A pack carries two different numbers, and showing the wrong one tells the player a
+price you are not about to charge them:
+
+| Field | Meaning |
+| --- | --- |
+| `amount` + `currency` | what the player **receives** — e.g. 100 coins |
+| `priceAmount` + `priceCurrency` | what the player **pays** — e.g. 0.99 USD |
+| `priceAmountMinor` | the same cost in whole minor units — 99 |
+
+Use `priceAmount` for display and `priceAmountMinor` for any comparison or
+arithmetic; money is held as whole minor units on the server, so keeping the
+integer authoritative is what stops a rounding error reaching a charge.
+
+```csharp
+var packs = await SusaPlaySDK.Purchases.GetTopupPacks();
+if (packs.Success)
+{
+    foreach (var pack in packs.Packs)
+    {
+        // "Coin 100 — 0.99 USD for 100 coins"
+        Debug.Log($"{pack.name} — {pack.priceAmount} {pack.priceCurrency} for {pack.amount} {pack.currency}");
+    }
+
+    if (packs.Packs.Length > 0)
+    {
+        await SusaPlaySDK.Purchases.StartWalletTopupPurchase(packs.Packs[0].topupPackId, true);
+    }
+}
+```
+
+`priceAmount`, `priceAmountMinor` and `priceCurrency` need SDK 1.7.0 or newer. On
+an older SDK the fields do not exist and the price cannot be read at all.
+
+### Spend platform wallet on a supported item
+
+```csharp
+var spend = await SusaPlaySDK.Purchases.SpendPlatformWallet("starter_pack");
+if (spend.Success && spend.Wallet != null)
+{
+    Debug.Log("Platform coins after spend: " + spend.Wallet.coins);
+}
 ```
 
 ## WebGL Runtime Expectations
@@ -249,7 +525,8 @@ This package currently depends on the SusaPlay WebGL shell contract:
 - the shell provides tokens through `SDK_GET_TOKEN`
 - API calls are proxied through shell/backend routing
 
-Direct standalone WebGL hosting is not the supported path for this package today.
+Direct standalone WebGL hosting is not the supported path for this package today. In the Unity
+Editor the Editor Simulator plays the shell's part (see "Test in the Unity Editor").
 
 ## Samples
 
@@ -257,7 +534,8 @@ Included sample:
 
 - `SDK Smoke Test`
 
-Import it from Unity Package Manager samples to validate the integration inside the SusaPlay shell.
+Import it from Unity Package Manager samples to validate the integration in Play Mode, against the
+Editor Simulator, and in a WebGL build inside the SusaPlay shell.
 
 ## Versioning
 
@@ -266,7 +544,12 @@ We recommend pinned Git tags:
 - `v1.0.0`
 - `v1.1.0`
 - `v1.1.1`
-- `v1.2.0`
+- `v1.2.3`
+- `v1.9.0`
+- `v1.9.1`
+- `v1.10.0`
+- `v1.11.0`
+- `v1.12.0`
 
 Guidelines:
 

@@ -8,33 +8,114 @@ namespace susaplay.SDK
     {
         private static SDKConfig _config;
         private static TokenManager _tokenManager;
+        private static AppCheckManager _appCheckManager;
         private static HttpClient _httpClient;
         private static TaskCompletionSource<string> _initTcs;
         private static AuthModule _auth;
         public static AuthModule Auth => _auth;
         private static CloudSaveModule _cloudSave;
         public static CloudSaveModule CloudSave => _cloudSave;
+        private static AchievementsModule _achievements;
+        public static AchievementsModule Achievements => _achievements;
         private static AnalyticsModule _analytics;
         private static AnalyticsFlusher _flusher;
         public static AnalyticsModule Analytics => _analytics;
+        private static WebhooksModule _webhooks;
+        public static WebhooksModule Webhooks => _webhooks;
         private static PurchasesModule _purchases;
         public static PurchasesModule Purchases => _purchases;
-        private const string SdkVersion = "1.0.0";
-        private const int InitTimeoutMs = 15000;
+        private static AdsModule _ads;
 
-        public static async Task Initialize()
+        /// <summary>Rewarded and interstitial ads, shown by the page. See <see cref="AdsModule"/>.</summary>
+        public static AdsModule Ads => _ads;
+        private static ApiModule _api;
+        public static ApiModule Api => _api;
+        private static BackendModule _backend;
+
+        /// <summary>Authenticated calls to the platform's own API. See <see cref="BackendModule"/>.</summary>
+        public static BackendModule Backend => _backend;
+        private static LiveOpsModule _liveOps;
+        public static LiveOpsModule LiveOps => _liveOps;
+        /// <summary>Canonical platform game id for this build. Empty until initialization completes.</summary>
+        public static string GameId { get; private set; } = "";
+
+        /// <summary>
+        /// True when the game runs inside a partner's app or page that the player can return to.
+        /// Show a "back to app" button only when this is true; on SusaPlay itself there is no
+        /// app to return to. Known once <see cref="Initialize"/> has completed.
+        /// </summary>
+        public static bool CanExitToHost { get; private set; }
+
+        /// <summary>
+        /// True when the Unity Editor Simulator is answering the SDK instead of the platform;
+        /// always false in a build. For debug display only — a game that behaves differently
+        /// when this is true is no longer testing what players will run.
+        /// </summary>
+        public static bool IsSimulated
+        {
+            get
+            {
+#if UNITY_EDITOR
+                return WebGLBridge.EditorOutbound != null && HttpClient.EditorTransport != null;
+#else
+                return false;
+#endif
+            }
+        }
+
+        private const string SdkVersion = "1.12.0";
+        private const int InitTimeoutMs = 15000;
+        private static bool _isInitialized;
+        private static bool _didSendGameLoaded;
+        private static Task _initTask;
+
+        /// <summary>
+        /// Brings the SDK up. Safe to call from more than one place.
+        ///
+        /// `_isInitialized` is only set once SDK_READY has come back, so two
+        /// components calling this in the same frame both saw it false and both
+        /// ran the whole body: the bridge handler was subscribed twice, the
+        /// second run replaced `_initTcs`, and SDK_READY then completed the same
+        /// source twice and threw out of a native callback — which surfaces as
+        /// Unity's fatal "error running the Unity content on this page" rather
+        /// than as a normal exception. The first caller, meanwhile, awaited a
+        /// source nothing would ever complete.
+        ///
+        /// Handing every caller the same Task is what makes a second call free
+        /// instead of destructive. A failed run clears the field so a retry can
+        /// still happen.
+        /// </summary>
+        public static Task Initialize()
+        {
+            if (_initTask != null)
+            {
+                return _initTask;
+            }
+
+            _initTask = InitializeInternal();
+            return _initTask;
+        }
+
+        private static async Task InitializeInternal()
         {
             _config = SDKConfig.Load();
             if (_config == null)
             {
                 Logger.Error("PlatformConfig asset not found. Run susaplay > Create Config Asset first.");
+                _initTask = null;
                 return;
             }
             WebGLBridge.Initialize();
             _tokenManager = new TokenManager();
             _tokenManager.Initialize();
-            _httpClient = new HttpClient(_config, _tokenManager);
+            _appCheckManager = new AppCheckManager();
+            _appCheckManager.Initialize();
+            _httpClient = new HttpClient(_config, _tokenManager, _appCheckManager);
             _initTcs = new TaskCompletionSource<string>();
+            // Unsubscribe first, the same way TokenManager.Initialize does: a
+            // handler left over from an earlier attempt would be invoked again
+            // and complete this source a second time.
+            WebGLBridge.OnMessageReceived -= HandleInitMessage;
             WebGLBridge.OnMessageReceived += HandleInitMessage;
             WebGLBridge.SendMessage(new BridgeMessage
             {
@@ -47,9 +128,96 @@ namespace susaplay.SDK
             {
                 WebGLBridge.OnMessageReceived -= HandleInitMessage;
                 Logger.Error("SusaPlay SDK init timed out waiting for SDK_READY.");
+                // Dropped so a later call can try again rather than being handed
+                // this failed run for the lifetime of the process.
+                _initTask = null;
                 return;
             }
             await _initTcs.Task;
+        }
+
+        /// <summary>
+        /// Returns the SDK to its never-initialized state at the start of every run.
+        ///
+        /// In a WebGL build each page load is a fresh process, so none of this state ever
+        /// survived. In the Editor with domain reload turned off (Enter Play Mode Options),
+        /// statics survive between Plays: the second Play was handed the first one's
+        /// `_initTask` and modules, and a single SDK_READY reached handlers from sessions
+        /// that no longer exist. SubsystemRegistration runs before any scene loads, so no
+        /// game code can call Initialize() ahead of it.
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        internal static void ResetStaticState()
+        {
+            _initTask = null;
+            _initTcs = null;
+            _isInitialized = false;
+            _didSendGameLoaded = false;
+            _config = null;
+            _tokenManager = null;
+            _appCheckManager = null;
+            _httpClient = null;
+            _auth = null;
+            _cloudSave = null;
+            _achievements = null;
+            _analytics = null;
+            _flusher = null;
+            _webhooks = null;
+            _purchases = null;
+            _ads = null;
+            _api = null;
+            _backend = null;
+            _liveOps = null;
+            GameId = "";
+            CanExitToHost = false;
+            WebGLBridge.ResetForNewSession();
+        }
+
+        public static void MarkGameLoaded()
+        {
+            if (!_isInitialized)
+            {
+                Logger.Error("SusaPlay SDK must be initialized before MarkGameLoaded.");
+                return;
+            }
+
+            if (_didSendGameLoaded)
+            {
+                return;
+            }
+
+            WebGLBridge.SendMessage(new BridgeMessage
+            {
+                type = "SDK_GAME_LOADED",
+                payload = "{}"
+            });
+            _didSendGameLoaded = true;
+        }
+
+        /// <summary>
+        /// Asks the page to close the game and return the player to the partner's app or page
+        /// that opened it. Save anything the player would lose first: the game may be unloaded
+        /// as soon as the partner reacts. Does nothing useful unless <see cref="CanExitToHost"/>
+        /// is true.
+        /// </summary>
+        public static void ExitToHost()
+        {
+            if (!_isInitialized)
+            {
+                Logger.Error("SusaPlay SDK must be initialized before ExitToHost.");
+                return;
+            }
+
+            if (!CanExitToHost)
+            {
+                Logger.Warn("ExitToHost called, but this page has no app to return to. Show the button only when CanExitToHost is true.");
+            }
+
+            WebGLBridge.SendMessage(new BridgeMessage
+            {
+                type = "SDK_EXIT_REQUEST",
+                payload = "{}"
+            });
         }
 
         private static void HandleInitMessage(string json)
@@ -101,24 +269,48 @@ namespace susaplay.SDK
             }
 
             _auth = new AuthModule();
-            _auth.Initialize(playerData);
+            _auth.Initialize(playerData, _tokenManager);
             _cloudSave = new CloudSaveModule(_httpClient, playerData.gameId);
-            _analytics = new AnalyticsModule(_httpClient);
-            _purchases = new PurchasesModule(playerData.gameId);
+            _achievements = new AchievementsModule(_httpClient, playerData.gameId);
+            _analytics = new AnalyticsModule(_httpClient, playerData.gameId, playerData.sessionId);
+            // Emit session_start automatically. Nothing else in the SDK queues an event, so
+            // without this a game that never calls LogEvent produces no analytics at all and
+            // DAU/MAU/retention stay empty for it. Queued here, shipped by the flusher below
+            // when FlushAnalyticsOnInitialize is on (the default).
+            _analytics.LogEvent("session_start");
+            _webhooks = new WebhooksModule(_httpClient, playerData.gameId, playerData.sessionId, playerData.PlayerIdOrUid());
+            _purchases = new PurchasesModule(_httpClient, playerData.gameId);
             _purchases.Initialize();
-            var flusherGO = new GameObject("SusaPlayAnalyticsFlusher");
-            GameObject.DontDestroyOnLoad(flusherGO);
-            _flusher = flusherGO.AddComponent<AnalyticsFlusher>();
-            _flusher.Initialize(_analytics);
+            _ads = new AdsModule();
+            _ads.Initialize();
+            _api = new ApiModule();
+            _backend = new BackendModule(_httpClient);
+            _liveOps = new LiveOpsModule(_config.LiveOpsContentBaseUrl, playerData.gameId);
+
+            // Surfaced so a game can attribute its own platform calls without hardcoding an id.
+            // This is the canonical id the platform sent with SDK_READY, not a value the build
+            // guessed, which is why it is worth exposing rather than letting each game invent one.
+            GameId = playerData.gameId;
+            CanExitToHost = playerData.canExitToHost;
+            if (_config.AutomaticAnalyticsFlushEnabled)
+            {
+                var flusherGO = new GameObject("SusaPlayAnalyticsFlusher");
+                GameObject.DontDestroyOnLoad(flusherGO);
+                _flusher = flusherGO.AddComponent<AnalyticsFlusher>();
+                _flusher.Initialize(
+                    _analytics,
+                    _config.AnalyticsFlushIntervalSeconds,
+                    _config.FlushAnalyticsOnInitialize,
+                    _config.FlushAnalyticsOnPause,
+                    _config.FlushAnalyticsOnQuit);
+            }
             WebGLBridge.OnMessageReceived -= HandleInitMessage;
             Logger.Log("SusaPlay SDK Ready.");
-            WebGLBridge.SendMessage(new BridgeMessage
-            {
-                type = "SDK_GAME_LOADED",
-                payload = "{}"
-            });
-            Logger.Log("SusaPlay SDK Ready.");
-            _initTcs.SetResult(message.payload);
+            _isInitialized = true;
+            // TrySetResult, not SetResult: this runs inside a callback from the
+            // browser, and throwing here takes down the whole Unity instance
+            // rather than failing one call.
+            _initTcs.TrySetResult(message.payload);
         }
     }
 
