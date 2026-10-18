@@ -42,6 +42,7 @@ namespace susaplay.SDK.Editor.Tests
                 "{\"format\":1,\"game\":{\"gameId\":\"g\"},\"adSettings\":{\"rewarded\":{\"enabled\":\"no\",\"rewardAmount\":0,\"maxPerDay\":\"4\"}}}");
 
             Assert.IsTrue(config.RewardedEnabled);
+            Assert.IsTrue(config.InterstitialEnabled);
             Assert.AreEqual(SimulatorConfig.DefaultRewardAmount, config.RewardAmount);
             Assert.AreEqual(4, config.MaxPerDay);
             Assert.AreEqual(SimulatorConfig.DefaultCooldownMinutes, config.CooldownMinutes);

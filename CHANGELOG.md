@@ -2,6 +2,23 @@
 
 All notable changes to `com.susaplay.sdk` should be documented in this file.
 
+## [1.12.0] - 2026-10-18
+
+Added:
+
+- `SusaPlaySDK.ExitToHost()` and `SusaPlaySDK.CanExitToHost`: a game inside a partner's app
+  can send the player back to it. Show a back button only while `CanExitToHost` is true. The
+  Editor Simulator gains an "Inside a partner's app" toggle to test it.
+- Cloud Save logs a warning for every failed save or load, with the HTTP status. Status 0 is
+  called out as "offline, or blocked by the browser", which the platform cannot see at all.
+
+Changed:
+
+- Interstitials have their own switch in the game's ad settings (`interstitial.enabled`) and no
+  longer follow `rewarded.enabled`. A game with rewarded ads off can still show interstitials,
+  and the other way round. The Editor Simulator reads `adSettings.interstitial` from the
+  configuration file; a file without it treats interstitials as on.
+
 ## [1.11.0] - 2026-10-13
 
 Changed:

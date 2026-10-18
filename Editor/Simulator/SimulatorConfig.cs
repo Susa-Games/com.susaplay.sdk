@@ -38,6 +38,7 @@ namespace susaplay.SDK.Editor.Simulator
         public Dictionary<string, object> Items { get; private set; } = new Dictionary<string, object>();
 
         public bool RewardedEnabled { get; private set; } = true;
+        public bool InterstitialEnabled { get; private set; } = true;
         public long RewardAmount { get; private set; } = DefaultRewardAmount;
         public long MaxPerDay { get; private set; } = DefaultMaxPerDay;
         public long CooldownMinutes { get; private set; } = DefaultCooldownMinutes;
@@ -112,15 +113,21 @@ namespace susaplay.SDK.Editor.Simulator
                 config.Items = items;
             }
 
-            if (root.TryGetValue("adSettings", out var adValue) && adValue is Dictionary<string, object> adSettings &&
-                adSettings.TryGetValue("rewarded", out var rewardedValue) && rewardedValue is Dictionary<string, object> rewarded)
+            if (root.TryGetValue("adSettings", out var adValue) && adValue is Dictionary<string, object> adSettings)
             {
                 // Normalized the way normalize_game_ad_settings does it, so a hand-written file
                 // behaves as the platform would.
-                config.RewardedEnabled = !(rewarded.TryGetValue("enabled", out var enabled) && enabled is bool flag) || flag;
-                config.RewardAmount = PositiveOr(rewarded, "rewardAmount", DefaultRewardAmount);
-                config.MaxPerDay = PositiveOr(rewarded, "maxPerDay", DefaultMaxPerDay);
-                config.CooldownMinutes = PositiveOr(rewarded, "cooldownMinutes", DefaultCooldownMinutes);
+                if (adSettings.TryGetValue("rewarded", out var rewardedValue) && rewardedValue is Dictionary<string, object> rewarded)
+                {
+                    config.RewardedEnabled = !(rewarded.TryGetValue("enabled", out var enabled) && enabled is bool flag) || flag;
+                    config.RewardAmount = PositiveOr(rewarded, "rewardAmount", DefaultRewardAmount);
+                    config.MaxPerDay = PositiveOr(rewarded, "maxPerDay", DefaultMaxPerDay);
+                    config.CooldownMinutes = PositiveOr(rewarded, "cooldownMinutes", DefaultCooldownMinutes);
+                }
+                if (adSettings.TryGetValue("interstitial", out var interstitialValue) && interstitialValue is Dictionary<string, object> interstitial)
+                {
+                    config.InterstitialEnabled = !(interstitial.TryGetValue("enabled", out var enabled) && enabled is bool flag) || flag;
+                }
             }
 
             if (root.TryGetValue("responses", out var responsesValue) && responsesValue is Dictionary<string, object> responses)

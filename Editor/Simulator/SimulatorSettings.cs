@@ -35,6 +35,10 @@ namespace susaplay.SDK.Editor.Simulator
         /// <summary>Applied at the next SDK_INIT, as a real session decides it at launch.</summary>
         public bool guest;
 
+        /// <summary>Applied at the next SDK_INIT: plays as if inside a partner's app, so
+        /// SusaPlaySDK.CanExitToHost is true.</summary>
+        public bool partnerEmbed;
+
         // Answered automatically by default, so a game works in Play Mode without the window open.
         public PurchaseOutcome purchaseOutcome = PurchaseOutcome.Paid;
         public AdOutcome adOutcome = AdOutcome.Complete;

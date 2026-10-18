@@ -14,6 +14,9 @@ namespace susaplay.SDK
         public string playerid;
         public string gameId;
         public string sessionId;
+        /// <summary>True when the page that runs the game can close it and return the player
+        /// to the app that opened it — a partner's embed. See SusaPlaySDK.ExitToHost.</summary>
+        public bool canExitToHost;
 
         public string PlayerIdOrUid()
         {

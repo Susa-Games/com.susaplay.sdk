@@ -179,9 +179,11 @@ namespace susaplay.SDK
                     continue;
                 }
 
+                LogFailure("Save", slot, response);
                 return SaveResult.Fail(response.Error);
             }
 
+            Logger.Warn("Cloud save failed on slot " + slot + " after " + MaxRetries + " conflict retries");
             return SaveResult.Fail("Save failed after " + MaxRetries + " retries");
         }
 
@@ -190,6 +192,7 @@ namespace susaplay.SDK
             var response = await _transport.Get("/save/read?gameId=" + _gameId + "&slot=" + slot);
             if (!response.Success)
             {
+                LogFailure("Load", slot, response);
                 return LoadResult.Fail(response.Error);
             }
             var envelope = JsonUtility.FromJson<SaveReadEnvelope>(response.Data);
@@ -207,6 +210,20 @@ namespace susaplay.SDK
             };
             _slotVersions[slot] = loadResult.Version;
             return loadResult;
+        }
+
+        /// <summary>
+        /// Status 0 means the request never got an HTTP answer: offline, or the browser blocked
+        /// it (CORS). The platform has no record of such a request at all, so this console line
+        /// is the only place the failure shows up.
+        /// </summary>
+        private static void LogFailure(string operation, string slot, HttpResponse response)
+        {
+            var cause = response.StatusCode == 0
+                ? " (no HTTP response — offline, or blocked by the browser)"
+                : "";
+            Logger.Warn("Cloud " + operation.ToLowerInvariant() + " failed on slot " + slot +
+                        ": status " + response.StatusCode + cause + " — " + response.Error);
         }
     }
 

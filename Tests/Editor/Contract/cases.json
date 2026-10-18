@@ -85,7 +85,8 @@
     "adSettings": {
       "provider": "google-adsense",
       "overlay": { "enabled": true, "leftSlotId": null, "rightSlotId": null },
-      "rewarded": { "enabled": true, "adUnitId": null, "rewardAmount": 1, "maxPerDay": 10, "cooldownMinutes": 30 }
+      "rewarded": { "enabled": true, "adUnitId": null, "rewardAmount": 1, "maxPerDay": 10, "cooldownMinutes": 30 },
+      "interstitial": { "enabled": true }
     },
     "responses": {
       "storeItems": {

@@ -109,6 +109,9 @@ namespace susaplay.SDK.Editor.Simulator
 
         public bool InSession { get; private set; }
         public bool IsGuest { get; private set; }
+        public bool CanExitToHost { get; private set; }
+        /// <summary>How many times the game asked to exit to the partner's app this session.</summary>
+        public int ExitRequests { get; private set; }
         public string SessionGameId { get; private set; }
         public string SessionId { get; private set; }
         public string SdkGameKey { get; private set; }
@@ -165,6 +168,13 @@ namespace susaplay.SDK.Editor.Simulator
                     StartAd(Text(payload, "requestId"), Text(payload, "adType"));
                     break;
                 case "SDK_GAME_LOADED":
+                    break;
+                case "SDK_EXIT_REQUEST":
+                    // A partner's app would close the game here. Play Mode keeps running so the
+                    // game can be tested further; the request is in the log above.
+                    ExitRequests++;
+                    Debug.Log("[SusaPlay Simulator] The game asked to exit to the partner's app (SDK_EXIT_REQUEST)." +
+                              (CanExitToHost ? "" : " This session is not a partner embed, so a real page would ignore it."));
                     break;
                 case "SDK_LOG_EVENT":
                 case "SDK_CUSTOM_WEBHOOK_EVENT":
@@ -300,6 +310,8 @@ namespace susaplay.SDK.Editor.Simulator
             SessionGameId = config.Loaded ? config.GameId : SdkGameKey;
             SessionId = Guid.NewGuid().ToString();
             IsGuest = _settings().guest;
+            CanExitToHost = _settings().partnerEmbed;
+            ExitRequests = 0;
             InSession = true;
             _backend.SessionGameId = SessionGameId;
 
@@ -313,7 +325,7 @@ namespace susaplay.SDK.Editor.Simulator
             {
                 return SimJson.Obj(
                     "mode", "guest",
-                    "playerData", SimJson.Obj("mode", "guest", "gameId", SessionGameId, "sessionId", SessionId));
+                    "playerData", SimJson.Obj("mode", "guest", "gameId", SessionGameId, "sessionId", SessionId, "canExitToHost", CanExitToHost));
             }
             return SimJson.Obj("mode", "authenticated", "playerData", PlayerData());
         }
@@ -328,7 +340,8 @@ namespace susaplay.SDK.Editor.Simulator
                 "avatarUrl", "",
                 "isAnonymous", false,
                 "gameId", SessionGameId,
-                "sessionId", SessionId);
+                "sessionId", SessionId,
+                "canExitToHost", CanExitToHost);
         }
 
         /// <summary>
@@ -356,6 +369,8 @@ namespace susaplay.SDK.Editor.Simulator
             _pending.Clear();
             InSession = false;
             IsGuest = false;
+            CanExitToHost = false;
+            ExitRequests = 0;
             SessionGameId = null;
             SessionId = null;
             _backend.SessionGameId = null;
@@ -552,8 +567,11 @@ namespace susaplay.SDK.Editor.Simulator
                 StartedAt = _now,
             };
 
-            // The play page checks the rewarded setting for every ad type (plan S9).
-            if (!_config().RewardedEnabled)
+            // The play page checks each ad type against its own setting.
+            var enabled = pending.AdType == "interstitial"
+                ? _config().InterstitialEnabled
+                : _config().RewardedEnabled;
+            if (!enabled)
             {
                 SendAdFailed(pending, "ADS_DISABLED");
                 return;

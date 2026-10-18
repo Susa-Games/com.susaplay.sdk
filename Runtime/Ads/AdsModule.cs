@@ -55,9 +55,8 @@ namespace susaplay.SDK
         /// is always false and <see cref="AdResult.Success"/> is the only answer
         /// that matters.
         ///
-        /// The platform gates every ad type behind the game's <c>rewarded.enabled</c>
-        /// setting, so an interstitial is refused with <c>ADS_DISABLED</c> while
-        /// rewarded ads are off, even though it pays no reward.
+        /// Refused with <c>ADS_DISABLED</c> while interstitials are turned off in the
+        /// game's ad settings. Rewarded ads have their own switch.
         /// </summary>
         public Task<AdResult> ShowInterstitial()
         {

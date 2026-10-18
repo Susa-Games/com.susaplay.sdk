@@ -34,6 +34,28 @@ namespace susaplay.SDK.Editor.Tests
         }
 
         [Test]
+        public void APartnerEmbedLetsTheGameExitToTheHost()
+        {
+            _sim.Settings.partnerEmbed = true;
+            Init();
+
+            var player = (Dictionary<string, object>)SimulatorFixture.Payload(_sim.LastDelivered("SDK_READY"))["playerData"];
+            Assert.AreEqual(true, player["canExitToHost"]);
+
+            _sim.Send("SDK_EXIT_REQUEST", "{}");
+            Assert.AreEqual(1, _sim.Shell.ExitRequests);
+        }
+
+        [Test]
+        public void OnSusaPlayItselfThereIsNoHostToExitTo()
+        {
+            Init();
+
+            var player = (Dictionary<string, object>)SimulatorFixture.Payload(_sim.LastDelivered("SDK_READY"))["playerData"];
+            Assert.AreEqual(false, player["canExitToHost"]);
+        }
+
+        [Test]
         public void ReadyCarriesTheSignedInPlayerInBothForms()
         {
             Init();
@@ -331,14 +353,32 @@ namespace susaplay.SDK.Editor.Tests
         }
 
         [Test]
-        public void DisabledAdsRefuseEveryAdType()
+        public void DisabledRewardedAdsRefuseOnlyRewardedAds()
         {
             _sim.Config = SimulatorConfig.FromJson(SimulatorFixture.ConfigJson.Replace("\"enabled\": true", "\"enabled\": false"));
             Init();
-            _sim.Send("SDK_AD_SHOW", "{\"requestId\":\"ad1\",\"adType\":\"interstitial\"}");
+            _sim.Send("SDK_AD_SHOW", "{\"requestId\":\"ad1\",\"adType\":\"rewarded\"}");
+            _sim.Send("SDK_AD_SHOW", "{\"requestId\":\"ad2\",\"adType\":\"interstitial\"}");
             _sim.Advance();
 
             Assert.AreEqual("ADS_DISABLED", SimulatorFixture.Payload(_sim.LastDelivered("SDK_AD_FAILED"))["reason"]);
+            Assert.AreEqual("ad2", SimulatorFixture.Payload(_sim.LastDelivered("SDK_AD_COMPLETE"))["requestId"]);
+        }
+
+        [Test]
+        public void DisabledInterstitialsRefuseOnlyInterstitials()
+        {
+            _sim.Config = SimulatorConfig.FromJson(SimulatorFixture.ConfigJson.Replace(
+                "\"adSettings\": {", "\"adSettings\": { \"interstitial\": { \"enabled\": false },"));
+            Init();
+            _sim.Send("SDK_AD_SHOW", "{\"requestId\":\"ad1\",\"adType\":\"interstitial\"}");
+            _sim.Send("SDK_AD_SHOW", "{\"requestId\":\"ad2\",\"adType\":\"rewarded\"}");
+            _sim.Advance();
+
+            var failed = SimulatorFixture.Payload(_sim.LastDelivered("SDK_AD_FAILED"));
+            Assert.AreEqual("ad1", failed["requestId"]);
+            Assert.AreEqual("ADS_DISABLED", failed["reason"]);
+            Assert.AreEqual("ad2", SimulatorFixture.Payload(_sim.LastDelivered("SDK_AD_COMPLETE"))["requestId"]);
         }
 
         [Test]

@@ -2,7 +2,7 @@
 
 Unity SDK package for integrating games with the SusaPlay platform.
 
-Latest stable release tag: `v1.11.0`
+Latest stable release tag: `v1.12.0`
 
 This package is intended for games that run inside the SusaPlay shell on WebGL today. The current implementation is real and usable, but still evolving. We are intentionally exposing all implemented methods so game teams can integrate early and help us tune the SDK against real game behavior.
 
@@ -220,12 +220,19 @@ Current behavior notes:
 - platform coins for ads are the platform's reward, not your game's: the amount, the daily
   limit and the cooldown are set by SusaPlay for every game alike, and only signed-in players
   earn them. Never add coins for an ad yourself
-- every ad type is gated behind the game's `rewarded.enabled` setting, so an interstitial is
-  refused with `ADS_DISABLED` while rewarded ads are off
+- rewarded ads and interstitials each have their own switch in the game's ad settings
+  (`rewarded.enabled`, `interstitial.enabled`); a request for a type that is off fails with
+  `ADS_DISABLED`
 - `Reason` is `ADS_DISABLED` when the game has ads off, `TIMEOUT` when the SDK gives up waiting,
   and otherwise whatever the chosen network reported
 - nothing here pauses the game: the ad is drawn by the page, over the build, and the game keeps
   running underneath — set `Time.timeScale = 0` yourself if that matters
+
+### Back to the partner's app
+
+Inside a partner's app, show a back button while `SusaPlaySDK.CanExitToHost` is true and call
+`SusaPlaySDK.ExitToHost()` when it is pressed. Save the player's progress first; the partner may
+close the game right away. On SusaPlay itself `CanExitToHost` is false.
 
 ### App Check (v1.2.3+)
 
@@ -303,7 +310,7 @@ Use Unity Package Manager with a Git URL pinned to a release tag:
 ```json
 {
   "dependencies": {
-    "com.susaplay.sdk": "https://github.com/Susa-Games/com.susaplay.sdk.git#v1.11.0"
+    "com.susaplay.sdk": "https://github.com/Susa-Games/com.susaplay.sdk.git#v1.12.0"
   }
 }
 ```
@@ -311,11 +318,11 @@ Use Unity Package Manager with a Git URL pinned to a release tag:
 You can also use:
 
 - Unity -> Window -> Package Manager -> Add package from git URL
-- `https://github.com/Susa-Games/com.susaplay.sdk.git#v1.11.0`
+- `https://github.com/Susa-Games/com.susaplay.sdk.git#v1.12.0`
 
 Versioning notes:
 
-- Use a tag such as `#v1.11.0` when you want a reproducible release install
+- Use a tag such as `#v1.12.0` when you want a reproducible release install
 - Use `#main` only if you intentionally want the moving head of development
 - Use `#latest` for the newest published SDK branch maintained by SusaPlay
 - Use `#release` for the current stable SDK branch maintained by SusaPlay
@@ -542,6 +549,7 @@ We recommend pinned Git tags:
 - `v1.9.1`
 - `v1.10.0`
 - `v1.11.0`
+- `v1.12.0`
 
 Guidelines:
 

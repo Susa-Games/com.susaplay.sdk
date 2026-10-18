@@ -40,6 +40,13 @@ namespace susaplay.SDK
         public static string GameId { get; private set; } = "";
 
         /// <summary>
+        /// True when the game runs inside a partner's app or page that the player can return to.
+        /// Show a "back to app" button only when this is true; on SusaPlay itself there is no
+        /// app to return to. Known once <see cref="Initialize"/> has completed.
+        /// </summary>
+        public static bool CanExitToHost { get; private set; }
+
+        /// <summary>
         /// True when the Unity Editor Simulator is answering the SDK instead of the platform;
         /// always false in a build. For debug display only — a game that behaves differently
         /// when this is true is no longer testing what players will run.
@@ -56,7 +63,7 @@ namespace susaplay.SDK
             }
         }
 
-        private const string SdkVersion = "1.11.0";
+        private const string SdkVersion = "1.12.0";
         private const int InitTimeoutMs = 15000;
         private static bool _isInitialized;
         private static bool _didSendGameLoaded;
@@ -162,6 +169,7 @@ namespace susaplay.SDK
             _backend = null;
             _liveOps = null;
             GameId = "";
+            CanExitToHost = false;
             WebGLBridge.ResetForNewSession();
         }
 
@@ -184,6 +192,32 @@ namespace susaplay.SDK
                 payload = "{}"
             });
             _didSendGameLoaded = true;
+        }
+
+        /// <summary>
+        /// Asks the page to close the game and return the player to the partner's app or page
+        /// that opened it. Save anything the player would lose first: the game may be unloaded
+        /// as soon as the partner reacts. Does nothing useful unless <see cref="CanExitToHost"/>
+        /// is true.
+        /// </summary>
+        public static void ExitToHost()
+        {
+            if (!_isInitialized)
+            {
+                Logger.Error("SusaPlay SDK must be initialized before ExitToHost.");
+                return;
+            }
+
+            if (!CanExitToHost)
+            {
+                Logger.Warn("ExitToHost called, but this page has no app to return to. Show the button only when CanExitToHost is true.");
+            }
+
+            WebGLBridge.SendMessage(new BridgeMessage
+            {
+                type = "SDK_EXIT_REQUEST",
+                payload = "{}"
+            });
         }
 
         private static void HandleInitMessage(string json)
@@ -257,6 +291,7 @@ namespace susaplay.SDK
             // This is the canonical id the platform sent with SDK_READY, not a value the build
             // guessed, which is why it is worth exposing rather than letting each game invent one.
             GameId = playerData.gameId;
+            CanExitToHost = playerData.canExitToHost;
             if (_config.AutomaticAnalyticsFlushEnabled)
             {
                 var flusherGO = new GameObject("SusaPlayAnalyticsFlusher");

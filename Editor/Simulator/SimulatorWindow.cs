@@ -27,6 +27,7 @@ namespace susaplay.SDK.Editor.Simulator
         private Label _configuration;
         private Button _removeConfig;
         private Toggle _guest;
+        private Toggle _partnerEmbed;
         private Button _signIn;
         private Label _resetNote;
         private EnumField _purchaseOutcome;
@@ -122,6 +123,16 @@ namespace susaplay.SDK.Editor.Simulator
                 SusaPlaySimulator.SaveSettings();
             });
             root.Add(_guest);
+            _partnerEmbed = new Toggle("Inside a partner's app (from the next Play)")
+            {
+                tooltip = "Makes SusaPlaySDK.CanExitToHost true, as in a partner's embed, so a back-to-app button can be tested.",
+            };
+            _partnerEmbed.RegisterValueChangedCallback(change =>
+            {
+                SusaPlaySimulator.Settings.partnerEmbed = change.newValue;
+                SusaPlaySimulator.SaveSettings();
+            });
+            root.Add(_partnerEmbed);
             var row = Row();
             _signIn = new Button(() => SusaPlaySimulator.Shell.SignIn()) { text = "Sign in", tooltip = "Signs the guest in during Play, as the shell's sign-in prompt does." };
             row.Add(_signIn);
@@ -249,6 +260,7 @@ namespace susaplay.SDK.Editor.Simulator
             _banner.style.display = banner == null ? DisplayStyle.None : DisplayStyle.Flex;
 
             _guest.SetValueWithoutNotify(settings.guest);
+            _partnerEmbed.SetValueWithoutNotify(settings.partnerEmbed);
             _signIn.SetEnabled(shell.InSession && shell.IsGuest);
             _resetNote.style.display = SusaPlaySimulator.ResetPending ? DisplayStyle.Flex : DisplayStyle.None;
             _purchaseOutcome.SetValueWithoutNotify(settings.purchaseOutcome);
