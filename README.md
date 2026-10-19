@@ -2,6 +2,13 @@
 
 Unity SDK package for integrating games with the SusaPlay platform.
 
+SusaPlay is a browser game portal at [susaplay.com](https://susaplay.com), built by
+[Susa Games](https://www.susa.games). Games you integrate with this SDK are played there.
+
+- Documentation: [docs.susaplay.com](https://docs.susaplay.com)
+- Developer Portal: [dev.susaplay.com](https://dev.susaplay.com)
+- Publishing on SusaPlay: [susaplay.com/developers](https://susaplay.com/developers)
+
 Latest stable release tag: `v1.12.0`
 
 This package is intended for games that run inside the SusaPlay shell on WebGL today. The current implementation is real and usable, but still evolving. We are intentionally exposing all implemented methods so game teams can integrate early and help us tune the SDK against real game behavior.
