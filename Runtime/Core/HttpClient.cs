@@ -27,54 +27,56 @@ namespace susaplay.SDK
         internal static Func<EditorHttpRequest, Task<EditorHttpAnswer>> EditorTransport;
 #endif
 
-        public async Task<HttpResponse> Post(string endpoint, string body)
+        // A stalled mobile request would otherwise never finish, and every caller awaiting it
+        // (a cloud-save load the game waits on, say) would hang with it.
+        private const int RequestTimeoutSeconds = 20;
+
+        public Task<HttpResponse> Post(string endpoint, string body)
         {
-            var token = await _tokenManager.GetTokenAsync();
-#if UNITY_EDITOR
-            if (EditorTransport != null)
-            {
-                return await SendThroughEditor("POST", endpoint, body, token);
-            }
-#endif
-            var url = _config.ApiBaseUrl + endpoint;
-            var request = new UnityWebRequest(url, "POST");
-            var bodyBytes = System.Text.Encoding.UTF8.GetBytes(body);
-            request.uploadHandler = new UploadHandlerRaw(bodyBytes);
-            request.downloadHandler = new DownloadHandlerBuffer();
-            request.SetRequestHeader("Content-Type", "application/json");
-            request.SetRequestHeader("Authorization", "Bearer " + token);
-            await AttachAppCheckHeader(request);
-            await request.SendWebRequest();
-            if (request.result == UnityWebRequest.Result.Success)
-            {
-                return new HttpResponse { Success = true, Data = request.downloadHandler.text, StatusCode = request.responseCode };
-            }
-            else
-            {
-                return HttpResponse.Fail(DescribeError(request), request.responseCode);
-            }
+            return Send("POST", endpoint, body);
         }
 
-        public async Task<HttpResponse> Get(string endpoint)
+        public Task<HttpResponse> Get(string endpoint)
         {
-            var token = await _tokenManager.GetTokenAsync();
+            return Send("GET", endpoint, null);
+        }
+
+        private async Task<HttpResponse> Send(string method, string endpoint, string body)
+        {
+            var tokenTask = _tokenManager.GetTokenAsync();
 #if UNITY_EDITOR
             if (EditorTransport != null)
             {
-                return await SendThroughEditor("GET", endpoint, null, token);
+                return await SendThroughEditor(method, endpoint, body, await tokenTask);
             }
 #endif
+            // Asked together, not one after the other: each is a round trip to the shell, and on
+            // a cold start the second used to wait for the first before the request could leave.
+            var appCheckTask = _appCheckManager != null ? _appCheckManager.GetTokenAsync() : Task.FromResult<string>(null);
+            var token = await tokenTask;
+            var appCheckToken = await appCheckTask;
+
             var url = _config.ApiBaseUrl + endpoint;
-            var request = UnityWebRequest.Get(url);
-            request.SetRequestHeader("Authorization", "Bearer " + token);
-            await AttachAppCheckHeader(request);
-            await request.SendWebRequest();
-            if (request.result == UnityWebRequest.Result.Success)
+            // Disposed so each request's native buffers are released; a session of regular
+            // cloud saves otherwise holds on to every one of them.
+            using (var request = new UnityWebRequest(url, method))
             {
-                return new HttpResponse { Success = true, Data = request.downloadHandler.text, StatusCode = request.responseCode };
-            }
-            else
-            {
+                if (body != null)
+                {
+                    request.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(body));
+                    request.SetRequestHeader("Content-Type", "application/json");
+                }
+                request.downloadHandler = new DownloadHandlerBuffer();
+                request.timeout = RequestTimeoutSeconds;
+                request.SetRequestHeader("Authorization", "Bearer " + token);
+                if (!string.IsNullOrEmpty(appCheckToken))
+                    request.SetRequestHeader("X-Firebase-AppCheck", appCheckToken);
+
+                await request.SendWebRequest();
+                if (request.result == UnityWebRequest.Result.Success)
+                {
+                    return new HttpResponse { Success = true, Data = request.downloadHandler.text, StatusCode = request.responseCode };
+                }
                 return HttpResponse.Fail(DescribeError(request), request.responseCode);
             }
         }
@@ -100,14 +102,6 @@ namespace susaplay.SDK
                 body = body.Substring(0, maxBodyChars) + "…";
             }
             return error + " — " + body;
-        }
-
-        private async Task AttachAppCheckHeader(UnityWebRequest request)
-        {
-            if (_appCheckManager == null) return;
-            var appCheckToken = await _appCheckManager.GetTokenAsync();
-            if (!string.IsNullOrEmpty(appCheckToken))
-                request.SetRequestHeader("X-Firebase-AppCheck", appCheckToken);
         }
 
 #if UNITY_EDITOR

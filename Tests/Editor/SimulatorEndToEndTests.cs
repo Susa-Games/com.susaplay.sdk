@@ -125,6 +125,48 @@ namespace susaplay.SDK.Editor.Tests
             Assert.IsTrue(ad.Result.Success);
             Assert.IsTrue(ad.Result.Rewarded);
         }
+
+        [UnityTest]
+        public IEnumerator AShellWithNoAppCheckTokenIsAskedOnlyOnce()
+        {
+            var asked = 0;
+            WebGLBridge.EditorOutbound = json =>
+            {
+                if (json.Contains("\"SDK_GET_APP_CHECK_TOKEN\"")) asked++;
+                _sim.Shell.OnOutbound(json);
+            };
+            var appCheck = new AppCheckManager();
+            appCheck.Initialize();
+
+            var first = appCheck.GetTokenAsync();
+            yield return Run(first);
+            var second = appCheck.GetTokenAsync();
+            yield return Run(second);
+
+            Assert.IsTrue(string.IsNullOrEmpty(first.Result));
+            Assert.IsTrue(string.IsNullOrEmpty(second.Result));
+            Assert.AreEqual(1, asked, "a null answer holds for the session");
+        }
+
+        [UnityTest]
+        public IEnumerator RequestsThatStartTogetherShareOneTokenRoundTrip()
+        {
+            var asked = 0;
+            WebGLBridge.EditorOutbound = json =>
+            {
+                if (json.Contains("\"SDK_GET_TOKEN\"")) asked++;
+                _sim.Shell.OnOutbound(json);
+            };
+            var tokens = new TokenManager();
+            tokens.Initialize();
+
+            var first = tokens.GetTokenAsync();
+            var second = tokens.GetTokenAsync();
+            yield return Run(Task.WhenAll(first, second));
+
+            Assert.AreEqual(1, asked);
+            Assert.AreEqual(first.Result, second.Result);
+        }
     }
 
     public sealed class SimulatorStateStoreTests

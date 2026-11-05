@@ -2,6 +2,23 @@
 
 All notable changes to `com.susaplay.sdk` should be documented in this file.
 
+## [1.13.0] - 2026-11-05
+
+Changed:
+
+- `MarkGameLoaded()` called before `Initialize()` has finished is no longer dropped. The SDK
+  remembers it and sends `SDK_GAME_LOADED` as soon as initialization completes, still only once.
+  In a partner's app the page passes this on as the "game started" signal.
+- A shell that answers the App Check request without a token is taken at its word for the rest
+  of the session: later requests go out at once without the header, instead of asking again
+  before each one.
+- The auth token and the App Check token are requested together, not one after the other, and
+  the App Check token is fetched as soon as the SDK is ready. Requests that start at the same
+  time share one round trip to the shell for each.
+- Platform requests time out after 20 seconds and fail with status 0, instead of waiting forever
+  on a stalled connection. Each request is disposed when it finishes, so its native buffers are
+  released.
+
 ## [1.12.0] - 2026-10-18
 
 Added:

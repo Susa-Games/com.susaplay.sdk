@@ -16,6 +16,7 @@ namespace susaplay.SDK
         private Dictionary<string, TaskCompletionSource<string>> _pendingRequests = new Dictionary<string, TaskCompletionSource<string>>();
         private string _cachedToken;
         private DateTime _tokenExpiry;
+        private Task<string> _inFlight;
 
         public void Initialize()
         {
@@ -24,12 +25,22 @@ namespace susaplay.SDK
             WebGLBridge.OnMessageReceived -= HandleMessage;
             WebGLBridge.OnMessageReceived += HandleMessage;
         }
-        public async Task<string> GetTokenAsync()
+        public Task<string> GetTokenAsync()
         {
             if (_cachedToken != null && DateTime.UtcNow < _tokenExpiry)
             {
-                return _cachedToken;
+                return Task.FromResult(_cachedToken);
             }
+            // Requests that start together share one round trip to the shell.
+            if (_inFlight == null || _inFlight.IsCompleted)
+            {
+                _inFlight = RequestFromShellAsync();
+            }
+            return _inFlight;
+        }
+
+        private async Task<string> RequestFromShellAsync()
+        {
             string requestId = Guid.NewGuid().ToString();
             TaskCompletionSource<string> tcs = new TaskCompletionSource<string>();
             _pendingRequests[requestId] = tcs;

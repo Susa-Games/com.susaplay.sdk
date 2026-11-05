@@ -26,6 +26,7 @@ namespace susaplay.SDK
         private DateTime _tokenExpiry;
         private bool _supported = true;
         private int _timeoutCount;
+        private Task<string> _inFlight;
 
         public void Initialize()
         {
@@ -39,14 +40,22 @@ namespace susaplay.SDK
         /// Returns a cached App Check token or requests a new one from the shell.
         /// Returns null if the shell does not support App Check (older shells).
         /// </summary>
-        public async Task<string> GetTokenAsync()
+        public Task<string> GetTokenAsync()
         {
             if (!_supported)
-                return null;
+                return Task.FromResult<string>(null);
 
             if (_cachedToken != null && DateTime.UtcNow < _tokenExpiry)
-                return _cachedToken;
+                return Task.FromResult(_cachedToken);
 
+            // Requests that start together share one round trip to the shell.
+            if (_inFlight == null || _inFlight.IsCompleted)
+                _inFlight = RequestFromShellAsync();
+            return _inFlight;
+        }
+
+        private async Task<string> RequestFromShellAsync()
+        {
             string requestId = Guid.NewGuid().ToString();
             var tcs = new TaskCompletionSource<string>();
             _pendingRequests[requestId] = tcs;
@@ -75,9 +84,17 @@ namespace susaplay.SDK
                 return null;
             }
 
-            // A reply (even a null token) proves the shell handles the message.
             _timeoutCount = 0;
-            return await tcs.Task;
+            var token = await tcs.Task;
+            if (string.IsNullOrEmpty(token))
+            {
+                // The shell answered but has no token: App Check is not set up for this page, or
+                // the device cannot run it (no Google Play Services, say). That holds for the
+                // whole session, so later requests go out at once instead of asking again.
+                Logger.Warn("Shell has no App Check token — proceeding without one for this session.");
+                _supported = false;
+            }
+            return token;
         }
 
         private void HandleMessage(string json)

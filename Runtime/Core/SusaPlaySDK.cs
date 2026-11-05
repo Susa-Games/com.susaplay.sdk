@@ -63,10 +63,11 @@ namespace susaplay.SDK
             }
         }
 
-        private const string SdkVersion = "1.12.0";
+        private const string SdkVersion = "1.13.0";
         private const int InitTimeoutMs = 15000;
         private static bool _isInitialized;
         private static bool _didSendGameLoaded;
+        private static bool _gameLoadedPending;
         private static Task _initTask;
 
         /// <summary>
@@ -153,6 +154,7 @@ namespace susaplay.SDK
             _initTcs = null;
             _isInitialized = false;
             _didSendGameLoaded = false;
+            _gameLoadedPending = false;
             _config = null;
             _tokenManager = null;
             _appCheckManager = null;
@@ -177,7 +179,10 @@ namespace susaplay.SDK
         {
             if (!_isInitialized)
             {
-                Logger.Error("SusaPlay SDK must be initialized before MarkGameLoaded.");
+                // A game that stops waiting for a slow Initialize() and moves on would otherwise
+                // lose this call, and the page and partner would never hear the game is playable.
+                _gameLoadedPending = true;
+                Logger.Log("MarkGameLoaded called before the SDK is ready — it will be sent once initialization completes.");
                 return;
             }
 
@@ -307,6 +312,16 @@ namespace susaplay.SDK
             WebGLBridge.OnMessageReceived -= HandleInitMessage;
             Logger.Log("SusaPlay SDK Ready.");
             _isInitialized = true;
+#if !UNITY_EDITOR
+            // Fetched now so the first platform request does not wait on it. The Editor
+            // Simulator has no App Check, and its requests never ask for a token.
+            _ = _appCheckManager.GetTokenAsync();
+#endif
+            if (_gameLoadedPending)
+            {
+                _gameLoadedPending = false;
+                MarkGameLoaded();
+            }
             // TrySetResult, not SetResult: this runs inside a callback from the
             // browser, and throwing here takes down the whole Unity instance
             // rather than failing one call.
