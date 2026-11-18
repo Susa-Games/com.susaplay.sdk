@@ -2,6 +2,19 @@
 
 All notable changes to `com.susaplay.sdk` should be documented in this file.
 
+## [Unreleased]
+
+## [1.14.0] - 2026-11-18
+
+Added:
+
+- A WebGL build check runs before every WebGL build, and on demand from SusaPlay → Check WebGL
+  Build. It catches texture settings that crash phones: Texture Compression set to DXT (WG001,
+  error), left at "Use Player Settings" (WG002), or textures whose WebGL override is a DXT/BC
+  format (WG003). Phones cannot use these formats and expand each texture to uncompressed RGBA,
+  which can push the browser tab over its memory limit. In the Editor an error asks before
+  building; batch builds only log.
+
 ## [1.13.0] - 2026-11-05
 
 Changed:
@@ -320,6 +333,8 @@ Notes:
 - Analytics events now stream to BigQuery directly on the backend — no SDK change required
 
 ## [Unreleased]
+
+## [1.14.0] - 2026-11-18
 
 Added:
 
